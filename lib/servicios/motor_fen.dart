@@ -19,6 +19,9 @@ class FlujoPeriodo {
   
   // Valor residual de activos (solo último periodo del horizonte)
   final double valorResidual;
+  
+  // Inversión inicial (solo periodo 0)
+  final double inversionInicial;
 
   FlujoPeriodo({
     required this.periodo,
@@ -31,6 +34,7 @@ class FlujoPeriodo {
     required this.amortizacionCapital,
     this.liquidacionSaldo = 0,
     this.valorResidual = 0,
+    this.inversionInicial = 0,
   });
 
   /// Flujo Operativo (EBITDA) = Ingresos - Costos Variables - Costos Fijos
@@ -40,10 +44,18 @@ class FlujoPeriodo {
   double get uai => ebitda - interes;
 
   /// Flujo de Caja Libre (FEN) = UAI - Amortización Capital - Liquidación + Valor Residual
-  double get flujoCaja => uai - amortizacionCapital - liquidacionSaldo + valorResidual;
+  /// Para periodo 0: retorna -inversionInicial (salida inicial de caja)
+  double get flujoCaja {
+    if (periodo == 0) return -inversionInicial;
+    return uai - amortizacionCapital - liquidacionSaldo + valorResidual;
+  }
 
   /// Flujo de Caja Operativo (para VPN operativo) = EBITDA
-  double get flujoOperativo => ebitda;
+  /// Para periodo 0: retorna -inversionInicial
+  double get flujoOperativo {
+    if (periodo == 0) return -inversionInicial;
+    return ebitda;
+  }
 
   Map<String, dynamic> toMap() => {
     'periodo': periodo,
@@ -58,6 +70,7 @@ class FlujoPeriodo {
     'amortizacion_capital': amortizacionCapital,
     'liquidacion_saldo': liquidacionSaldo,
     'valor_residual': valorResidual,
+    'inversion_inicial': inversionInicial,
     'flujo_caja': flujoCaja,
     'flujo_operativo': flujoOperativo,
   };
@@ -151,6 +164,7 @@ class MotorFEN {
       amortizacionCapital: 0,
       liquidacionSaldo: 0,
       valorResidual: 0,
+      inversionInicial: aportePropio, // Salida de caja inicial = aporte propio
     ));
 
     // PERIODOS 1..horizontePeriodos
