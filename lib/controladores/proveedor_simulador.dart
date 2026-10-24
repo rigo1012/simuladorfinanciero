@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../modelos/modelo_inversion.dart';
 import '../modelos/activo.dart';
+import '../modelos/configuracion_temporal.dart';
+import '../modelos/ingreso_periodo.dart';
+import '../modelos/costo_variable.dart';
+import '../modelos/costo_fijo.dart';
+import '../modelos/estructura_capital.dart';
 import '../nucleo/dbayuda.dart';
 
 /// Proveedor principal del simulador financiero para sistemas de riego.
@@ -44,6 +49,52 @@ class ProveedorSimulador extends ChangeNotifier {
   void limpiarActivos() {
     _activos.clear();
     notifyListeners();
+  }
+
+  // --- CONFIGURACIÓN TEMPORAL (Fase 0) ---
+  ConfiguracionTemporal? _configTemporal;
+  ConfiguracionTemporal get configTemporal => _configTemporal!;
+  bool get estaConfigurado => _configTemporal != null;
+
+  /// Configura la base temporal del proyecto.
+  /// Reinicia todos los datos dependientes (activos, ingresos, costos, financiamiento).
+  void configurarTemporal(ConfiguracionTemporal config) {
+    _configTemporal = config;
+    _reiniciarDatosDependientes();
+    notifyListeners();
+  }
+
+  /// Reinicia configuración temporal y todos los datos.
+  void reiniciarConfiguracionTemporal() {
+    _configTemporal = null;
+    _reiniciarDatosDependientes();
+    notifyListeners();
+  }
+
+  // --- INGRESOS ESTIMADOS (por periodo) ---
+  final List<IngresoPeriodo> _ingresos = [];
+  List<IngresoPeriodo> get ingresos => List.unmodifiable(_ingresos);
+
+  // --- COSTOS VARIABLES (por periodo, con inflación) ---
+  final List<CostoVariablePeriodo> _costosVariables = [];
+  List<CostoVariablePeriodo> get costosVariables => List.unmodifiable(_costosVariables);
+
+  // --- COSTOS FIJOS (por periodo) ---
+  final List<CostoFijoPeriodo> _costosFijos = [];
+  List<CostoFijoPeriodo> get costosFijos => List.unmodifiable(_costosFijos);
+
+  // --- ESTRUCTURA DE CAPITAL / FINANCIAMIENTO ---
+  EstructuraCapital? _estructuraCapital;
+  EstructuraCapital? get estructuraCapital => _estructuraCapital;
+
+  void _reiniciarDatosDependientes() {
+    _activos.clear();
+    _ingresos.clear();
+    _costosVariables.clear();
+    _costosFijos.clear();
+    _estructuraCapital = null;
+    _ultimoResultado = null;
+    _error = null;
   }
 
   // Getters públicos

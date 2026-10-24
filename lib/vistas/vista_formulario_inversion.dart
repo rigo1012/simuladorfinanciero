@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import 'seccion_activos.dart';
+import 'vista_config_temporal.dart';
 
 class VistaFormularioInversion extends StatefulWidget {
   const VistaFormularioInversion({super.key});
@@ -52,185 +53,304 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Form(
-        key: _llaveFormulario,
-        child: ListView(
-          children: [
-            const Text(
-              'Configuración del Sistema de Riego',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Defina los activos del proyecto. La Inversión Requerida se calcula automáticamente.',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 24),
+    return Consumer<ProveedorSimulador>(
+      builder: (context, proveedor, _) {
+        final estaConfigurado = proveedor.estaConfigurado;
 
-            // === SECCIÓN ACTIVOS (NUEVA) ===
-            const SeccionActivos(),
-            const SizedBox(height: 32),
+        return Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _llaveFormulario,
+            child: ListView(
+              children: [
+                // === PASO 0: CONFIGURACIÓN TEMPORAL (OBLIGATORIO) ===
+                if (!estaConfigurado) ...[
+                  const VistaConfigTemporal(),
+                  const SizedBox(height: 24),
+                  _buildStepIndicator(0, 3, 'Configuración Temporal'),
+                ] else ...[
+                  // Mostrar resumen de configuración y botón para cambiarla
+                  _buildConfigSummary(proveedor),
+                  const SizedBox(height: 24),
+                  _buildStepIndicator(1, 3, 'Activos e Inversión'),
+                  
+                  // === SECCIÓN ACTIVOS ===
+                  const SeccionActivos(),
+                  const SizedBox(height: 32),
 
-            // Divisor visual
-            Divider(color: Colors.grey.shade300, thickness: 1),
-            const SizedBox(height: 24),
+                  // Divisor visual
+                  Divider(color: Colors.grey.shade300, thickness: 1),
+                  const SizedBox(height: 24),
+                  _buildStepIndicator(2, 3, 'Parámetros Financieros'),
 
-            // === PARÁMETROS FINANCIEROS ===
-            const Text(
-              'Parámetros de Evaluación Financiera',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
+                  // === PARÁMETROS FINANCIEROS ===
+                  const Text(
+                    'Parámetros de Evaluación Financiera',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'La Tasa de Descuento (TREMA) es la rentabilidad mínima esperada. '
+                    'El Horizonte debe ser ≤ a los años de proyección configurados.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 16),
 
-            // Campo 1: Tasa de Descuento
-            TextFormField(
-              controller: _tasaCtrl,
-              focusNode: _nodoTasa,
-              textInputAction: TextInputAction.next,
-              onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_nodoAnios),
-              decoration: const InputDecoration(
-                labelText: 'Tasa de Descuento (%) *',
-                hintText: 'Ej: 12.5',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.percent),
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
-              ],
-              validator: (valor) {
-                if (valor == null || valor.isEmpty) return 'Requerido';
-                final numero = double.tryParse(valor);
-                if (numero == null) return 'Número inválido';
-                if (numero <= 0 || numero > 100) return 'La tasa debe estar entre 0.01 y 100';
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Campo 2: Horizonte de Inversión
-            TextFormField(
-              controller: _aniosCtrl,
-              focusNode: _nodoAnios,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _enviarFormulario(context.read<ProveedorSimulador>()),
-              decoration: const InputDecoration(
-                labelText: 'Horizonte de Inversión (Años) *',
-                hintText: 'Ej: 10',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.calendar_today),
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-              validator: (valor) {
-                if (valor == null || valor.isEmpty) return 'Requerido';
-                final numero = int.tryParse(valor);
-                if (numero == null) return 'Debe ser un número entero';
-                if (numero <= 0) return 'El horizonte debe ser de al menos 1 año';
-                if (numero > 50) return 'Horizonte irreal para equipamiento de riego';
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
-
-            // Botón Calcular
-            Consumer<ProveedorSimulador>(
-              builder: (context, proveedor, child) {
-                final tieneActivos = proveedor.inversionRequerida.activos.isNotEmpty;
-                final montoTotal = proveedor.inversionRequerida.total;
-
-                return Column(
-                  children: [
-                    if (!tieneActivos)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Agregue al menos un activo para habilitar el cálculo',
-                                style: TextStyle(color: Colors.orange.shade800),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.green.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.green.shade700),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Inversión Requerida calculada: ',
-                              style: TextStyle(color: Colors.green.shade800),
-                            ),
-                            Text(
-                              _formatCurrency(montoTotal),
-                              style: TextStyle(
-                                color: Colors.green.shade800,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: (proveedor.estaCargando || !tieneActivos)
-                            ? null
-                            : () => _enviarFormulario(proveedor),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(200, 56),
-                          backgroundColor: Colors.green.shade700,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: proveedor.estaCargando
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
-                                ),
-                              )
-                            : const Text(
-                                'Calcular Rentabilidad',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                              ),
-                      ),
+                  // Campo 1: Tasa de Descuento (TREMA)
+                  TextFormField(
+                    controller: _tasaCtrl,
+                    focusNode: _nodoTasa,
+                    textInputAction: TextInputAction.next,
+                    onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_nodoAnios),
+                    decoration: const InputDecoration(
+                      labelText: 'Tasa de Descuento - TREMA (%) *',
+                      hintText: 'Ej: 12.5',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.percent),
+                      helperText: 'Tasa Mínima de Rentabilidad Esperada',
                     ),
-                  ],
-                );
-              },
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                    ],
+                    validator: (valor) {
+                      if (valor == null || valor.isEmpty) return 'Requerido';
+                      final numero = double.tryParse(valor);
+                      if (numero == null) return 'Número inválido';
+                      if (numero <= 0 || numero > 100) return 'La tasa debe estar entre 0.01 y 100';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Campo 2: Horizonte de Evaluación
+                  TextFormField(
+                    controller: _aniosCtrl,
+                    focusNode: _nodoAnios,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _enviarFormulario(context.read<ProveedorSimulador>()),
+                    decoration: InputDecoration(
+                      labelText: 'Horizonte de Evaluación (Años) *',
+                      hintText: 'Ej: 5',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.calendar_today),
+                      helperText: 'Máx. ${proveedor.configTemporal.anosProyeccion} años (configuración temporal)',
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    validator: (valor) {
+                      if (valor == null || valor.isEmpty) return 'Requerido';
+                      final numero = int.tryParse(valor);
+                      if (numero == null) return 'Debe ser un número entero';
+                      if (numero <= 0) return 'El horizonte debe ser de al menos 1 año';
+                      final maxAnos = proveedor.configTemporal.anosProyeccion;
+                      if (numero > maxAnos) return 'No puede exceder los $maxAnos años de proyección';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Botón Calcular
+                  _buildCalculateButton(proveedor),
+                ],
+              ],
             ),
-          ],
-        ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConfigSummary(ProveedorSimulador proveedor) {
+    final config = proveedor.configTemporal;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.shade200),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.blue.shade700),
+              const SizedBox(width: 12),
+              Text(
+                'Configuración Temporal Definida',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade800,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => proveedor.reiniciarConfiguracionTemporal(),
+                icon: Icon(Icons.edit, size: 18, color: Colors.blue.shade700),
+                label: Text('Cambiar', style: TextStyle(color: Colors.blue.shade700)),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.blue.shade700,
+                  side: BorderSide(color: Colors.blue.shade300),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _ConfigChip(label: 'Periodo', value: '${config.mesesPorPeriodo} meses', icon: Icons.calendar_month),
+              _ConfigChip(label: 'Proyección', value: '${config.anosProyeccion} años', icon: Icons.date_range),
+              _ConfigChip(label: 'Ciclos/año', value: '${config.cosechasPorAnio}', icon: Icons.agriculture),
+              _ConfigChip(label: 'Total Periodos', value: '${config.totalPeriodos}', icon: Icons.format_list_numbered, highlight: true),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepIndicator(int actual, int total, String titulo) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          for (int i = 1; i <= total; i++) ...[
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: i <= actual ? Colors.green.shade700 : Colors.grey.shade300,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '$i',
+                  style: TextStyle(
+                    color: i <= actual ? Colors.white : Colors.grey.shade600,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+            if (i < total)
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: i < actual ? Colors.green.shade700 : Colors.grey.shade300,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+              ),
+          ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Paso $actual de $total: $titulo',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: actual <= total ? Colors.green.shade700 : Colors.grey.shade600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalculateButton(ProveedorSimulador proveedor) {
+    final tieneActivos = proveedor.inversionRequerida.activos.isNotEmpty;
+    final montoTotal = proveedor.inversionRequerida.total;
+
+    return Column(
+      children: [
+        if (!tieneActivos)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Agregue al menos un activo para habilitar el cálculo',
+                    style: TextStyle(color: Colors.orange.shade800),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green.shade700),
+                const SizedBox(width: 12),
+                Text(
+                  'Inversión Requerida calculada: ',
+                  style: TextStyle(color: Colors.green.shade800),
+                ),
+                Text(
+                  _formatCurrency(montoTotal),
+                  style: TextStyle(
+                    color: Colors.green.shade800,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: (proveedor.estaCargando || !tieneActivos)
+                ? null
+                : () => _enviarFormulario(proveedor),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(200, 56),
+              backgroundColor: Colors.green.shade700,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+            ),
+            child: proveedor.estaCargando
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                    ),
+                  )
+                : const Text(
+                    'Calcular Rentabilidad',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -238,6 +358,51 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
     return value.toStringAsFixed(2).replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
       (m) => '${m[1]},',
+    );
+  }
+}
+
+class _ConfigChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final bool highlight;
+
+  const _ConfigChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.highlight = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: highlight ? Colors.blue.shade100 : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: highlight ? Colors.blue.shade300 : Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: highlight ? Colors.blue.shade700 : Colors.grey.shade600),
+          const SizedBox(width: 6),
+          Text(
+            '$label: ',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: highlight ? Colors.blue.shade800 : Colors.black87,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
