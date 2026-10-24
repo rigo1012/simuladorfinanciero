@@ -208,10 +208,10 @@ class _SeccionActivosState extends State<SeccionActivos> {
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,]+$'))],
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Requerido';
-                    final n = int.tryParse(v);
+                    final n = int.tryParse(v.replaceAll(',', ''));
                     if (n == null || n < 1) return 'Mínimo 1';
                     return null;
                   },
@@ -221,15 +221,15 @@ class _SeccionActivosState extends State<SeccionActivos> {
                   controller: costoCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Costo Unitario *',
-                    hintText: 'Ej: 800000',
+                    hintText: 'Ej: 800,000',
                     border: OutlineInputBorder(),
                     prefixText: '\$ ',
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))],
+                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,.]+$'))],
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Requerido';
-                    final n = double.tryParse(v);
+                    final n = double.tryParse(v.replaceAll(',', ''));
                     if (n == null || n <= 0) return 'Debe ser > 0';
                     return null;
                   },
@@ -249,8 +249,8 @@ class _SeccionActivosState extends State<SeccionActivos> {
               final nuevo = Activo(
                 id: 'act_${DateTime.now().millisecondsSinceEpoch}_$_nextId',
                 nombre: nombreCtrl.text.trim(),
-                unidades: int.parse(unidadesCtrl.text),
-                costoUnitario: double.parse(costoCtrl.text),
+                unidades: int.parse(unidadesCtrl.text.replaceAll(',', '')),
+                costoUnitario: double.parse(costoCtrl.text.replaceAll(',', '')),
               );
               _nextId++;
               proveedor.agregarActivo(nuevo);
@@ -325,8 +325,8 @@ class _ActivoCardState extends State<_ActivoCard> {
     }
     final updated = widget.activo.copyWith(
       nombre: _nombreCtrl.text.trim(),
-      unidades: int.parse(_unidadesCtrl.text),
-      costoUnitario: double.parse(_costoCtrl.text),
+      unidades: int.parse(_unidadesCtrl.text.replaceAll(',', '')),
+      costoUnitario: double.parse(_costoCtrl.text.replaceAll(',', '')),
     );
     widget.onUpdate(updated);
   }
@@ -424,10 +424,10 @@ class _ActivoCardState extends State<_ActivoCard> {
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,]+$'))],
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Req.';
-                        final n = int.tryParse(v);
+                        final n = int.tryParse(v.replaceAll(',', ''));
                         if (n == null || n < 1) return '≥1';
                         return null;
                       },
@@ -444,10 +444,10 @@ class _ActivoCardState extends State<_ActivoCard> {
                         prefixText: '\$ ',
                       ),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*'))],
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,.]+$'))],
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Req.';
-                        final n = double.tryParse(v);
+                        final n = double.tryParse(v.replaceAll(',', ''));
                         if (n == null || n <= 0) return '>0';
                         return null;
                       },
