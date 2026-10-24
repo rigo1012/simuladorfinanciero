@@ -156,6 +156,60 @@ class ProveedorSimulador extends ChangeNotifier {
     return _estructuraCapital!.saldoInsolutoEnPeriodo(periodo, mesesPorPeriodo);
   }
 
+  // --- INGRESOS ESTIMADOS (CRUD) ---
+  /// Actualiza o crea un ingreso para un periodo específico.
+  void actualizarIngreso(IngresoPeriodo ingreso) {
+    final index = _ingresos.indexWhere((i) => i.periodo == ingreso.periodo);
+    if (index != -1) {
+      _ingresos[index] = ingreso;
+    } else {
+      _ingresos.add(ingreso);
+      _ingresos.sort((a, b) => a.periodo.compareTo(b.periodo));
+    }
+    notifyListeners();
+  }
+
+  /// Elimina un ingreso por periodo.
+  void eliminarIngreso(int periodo) {
+    _ingresos.removeWhere((i) => i.periodo == periodo);
+    notifyListeners();
+  }
+
+  /// Limpia todos los ingresos.
+  void limpiarIngresos() {
+    _ingresos.clear();
+    notifyListeners();
+  }
+
+  /// Obtiene ingreso para un periodo específico (null si no existe).
+  IngresoPeriodo? obtenerIngreso(int periodo) {
+    try {
+      return _ingresos.firstWhere((i) => i.periodo == periodo);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Verifica si todos los periodos tienen ingresos definidos.
+  bool get ingresosCompletos {
+    if (!estaConfigurado) return false;
+    final total = configTemporal.totalPeriodos;
+    return _ingresos.length == total && _ingresos.every((i) => i.precio > 0 && i.demanda > 0);
+  }
+
+  /// Getter para Motor FEN: ingreso de un periodo (0 si no definido).
+  double ingresoEnPeriodo(int periodo) {
+    final ing = obtenerIngreso(periodo);
+    return ing?.ingreso ?? 0;
+  }
+
+  /// Getter para Motor FEN: lista de ingresos ordenada por periodo (rellena con 0 si faltan).
+  List<double> get ingresosPorPeriodo {
+    if (!estaConfigurado) return [];
+    final total = configTemporal.totalPeriodos;
+    return List.generate(total, (i) => ingresoEnPeriodo(i + 1));
+  }
+
   void _reiniciarDatosDependientes() {
     _activos.clear();
     _ingresos.clear();

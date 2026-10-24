@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import 'seccion_activos.dart';
+import 'seccion_ingresos.dart';
 import 'vista_config_temporal.dart';
 import 'vista_financiamiento.dart';
 
@@ -98,8 +99,15 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                     const SizedBox(height: 24),
                   ],
 
-                  // === PASO 3: PARÁMETROS FINANCIEROS ===
-                  _buildStepIndicator(tieneFinanciamiento ? 3 : 3, 4, 'Parámetros de Evaluación'),
+                  // === PASO 3: INGRESOS ESTIMADOS ===
+                  _buildStepIndicator(3, 5, 'Ingresos Estimados'),
+                  const SeccionIngresos(),
+                  const SizedBox(height: 32),
+                  Divider(color: Colors.grey.shade300, thickness: 1),
+                  const SizedBox(height: 24),
+
+                  // === PASO 4: PARÁMETROS FINANCIEROS ===
+                  _buildStepIndicator(4, 5, 'Parámetros de Evaluación'),
 
                   const Text(
                     'Parámetros de Evaluación Financiera',
@@ -340,7 +348,8 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   Widget _buildCalculateButton(ProveedorSimulador proveedor, bool tieneFinanciamiento) {
     final tieneActivos = proveedor.inversionRequerida.activos.isNotEmpty;
     final montoTotal = proveedor.inversionRequerida.total;
-    final listoParaCalcular = tieneActivos && tieneFinanciamiento;
+    final ingresosCompletos = proveedor.ingresosCompletos;
+    final listoParaCalcular = tieneActivos && tieneFinanciamiento && ingresosCompletos;
 
     return Column(
       children: [
@@ -382,6 +391,28 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 Expanded(
                   child: Text(
                     'Complete la Estructura de Financiamiento en Paso 2',
+                    style: TextStyle(color: Colors.orange.shade800),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (!ingresosCompletos)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Complete Ingresos Estimados en Paso 3 (${proveedor.configTemporal.totalPeriodos} periodos)',
                     style: TextStyle(color: Colors.orange.shade800),
                   ),
                 ),
