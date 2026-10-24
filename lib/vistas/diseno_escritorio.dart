@@ -58,9 +58,19 @@ class _DisenoEscritorioState extends State<DisenoEscritorio> {
             ),
           if (!esEstrecha) const VerticalDivider(thickness: 1, width: 1),
           Expanded(
-            child: IndexedStack(
-              index: _indiceSeleccionado,
-              children: _pantallas,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SizedBox(
+                  width: constraints.maxWidth,
+                  height: constraints.maxHeight,
+                  child: RepaintBoundary(
+                    child: IndexedStack(
+                      index: _indiceSeleccionado,
+                      children: _pantallas,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
