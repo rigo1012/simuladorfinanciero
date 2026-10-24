@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import 'seccion_activos.dart';
 import 'vista_config_temporal.dart';
+import 'vista_financiamiento.dart';
 
 class VistaFormularioInversion extends StatefulWidget {
   const VistaFormularioInversion({super.key});
@@ -56,6 +57,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
     return Consumer<ProveedorSimulador>(
       builder: (context, proveedor, _) {
         final estaConfigurado = proveedor.estaConfigurado;
+        final tieneFinanciamiento = proveedor.estructuraCapital != null;
 
         return Padding(
           padding: const EdgeInsets.all(24.0),
@@ -67,23 +69,38 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 if (!estaConfigurado) ...[
                   const VistaConfigTemporal(),
                   const SizedBox(height: 24),
-                  _buildStepIndicator(0, 3, 'Configuración Temporal'),
+                  _buildStepIndicator(0, 4, 'Configuración Temporal'),
                 ] else ...[
                   // Mostrar resumen de configuración y botón para cambiarla
                   _buildConfigSummary(proveedor),
                   const SizedBox(height: 24),
-                  _buildStepIndicator(1, 3, 'Activos e Inversión'),
+                  _buildStepIndicator(1, 4, 'Activos e Inversión'),
                   
-                  // === SECCIÓN ACTIVOS ===
+                  // === PASO 1: SECCIÓN ACTIVOS ===
                   const SeccionActivos(),
                   const SizedBox(height: 32),
 
                   // Divisor visual
                   Divider(color: Colors.grey.shade300, thickness: 1),
                   const SizedBox(height: 24),
-                  _buildStepIndicator(2, 3, 'Parámetros Financieros'),
 
-                  // === PARÁMETROS FINANCIEROS ===
+                  // === PASO 2: FINANCIAMIENTO (si no configurado) O RESUMEN ===
+                  if (!tieneFinanciamiento) ...[
+                    _buildStepIndicator(2, 4, 'Estructura de Financiamiento'),
+                    const VistaFinanciamiento(),
+                    const SizedBox(height: 32),
+                    Divider(color: Colors.grey.shade300, thickness: 1),
+                    const SizedBox(height: 24),
+                  ] else ...[
+                    _buildFinanciamientoSummary(proveedor),
+                    const SizedBox(height: 24),
+                    Divider(color: Colors.grey.shade300, thickness: 1),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // === PASO 3: PARÁMETROS FINANCIEROS ===
+                  _buildStepIndicator(tieneFinanciamiento ? 3 : 3, 4, 'Parámetros de Evaluación'),
+
                   const Text(
                     'Parámetros de Evaluación Financiera',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -151,13 +168,70 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                   const SizedBox(height: 32),
 
                   // Botón Calcular
-                  _buildCalculateButton(proveedor),
+                  _buildCalculateButton(proveedor, tieneFinanciamiento),
                 ],
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFinanciamientoSummary(ProveedorSimulador proveedor) {
+    final fin = proveedor.estructuraCapital!;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.purple.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.purple.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.purple.shade700),
+              const SizedBox(width: 12),
+              Text(
+                'Financiamiento Definido',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple.shade800,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () => proveedor.reiniciarFinanciamiento(),
+                icon: Icon(Icons.edit, size: 18, color: Colors.purple.shade700),
+                label: Text('Cambiar', style: TextStyle(color: Colors.purple.shade700)),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.purple.shade700,
+                  side: BorderSide(color: Colors.purple.shade300),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _ConfigChip(label: 'Capital Propio', value: '${fin.pctPropio.toStringAsFixed(1)}%', icon: Icons.person, highlight: true),
+              _ConfigChip(label: 'Deuda', value: '${fin.pctDeuda.toStringAsFixed(1)}%', icon: Icons.credit_card),
+              if (fin.tieneDeuda) ...[
+                _ConfigChip(label: 'Préstamo', value: _formatCurrency(fin.montoPrestamo), icon: Icons.attach_money),
+                _ConfigChip(label: 'Cuota/mes', value: _formatCurrency(fin.cuotaMensual), icon: Icons.payments),
+                _ConfigChip(label: 'Tasa', value: '${fin.tasaInteresAnual?.toStringAsFixed(2)}%', icon: Icons.percent),
+                _ConfigChip(label: 'Plazo', value: '${fin.plazoMeses} meses', icon: Icons.calendar_month),
+              ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -263,9 +337,10 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
     );
   }
 
-  Widget _buildCalculateButton(ProveedorSimulador proveedor) {
+  Widget _buildCalculateButton(ProveedorSimulador proveedor, bool tieneFinanciamiento) {
     final tieneActivos = proveedor.inversionRequerida.activos.isNotEmpty;
     final montoTotal = proveedor.inversionRequerida.total;
+    final listoParaCalcular = tieneActivos && tieneFinanciamiento;
 
     return Column(
       children: [
@@ -284,7 +359,29 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Agregue al menos un activo para habilitar el cálculo',
+                    'Agregue al menos un activo en Paso 1',
+                    style: TextStyle(color: Colors.orange.shade800),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (!tieneFinanciamiento)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Complete la Estructura de Financiamiento en Paso 2',
                     style: TextStyle(color: Colors.orange.shade800),
                   ),
                 ),
@@ -305,7 +402,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 Icon(Icons.check_circle, color: Colors.green.shade700),
                 const SizedBox(width: 12),
                 Text(
-                  'Inversión Requerida calculada: ',
+                  'Inversión Requerida: ',
                   style: TextStyle(color: Colors.green.shade800),
                 ),
                 Text(
@@ -316,6 +413,13 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                     fontSize: 16,
                   ),
                 ),
+                if (proveedor.tieneDeuda) ...[
+                  const SizedBox(width: 16),
+                  Text(
+                    '(Aporte Propio: ${_formatCurrency(proveedor.aportePropio)})',
+                    style: TextStyle(color: Colors.green.shade700, fontSize: 12),
+                  ),
+                ],
               ],
             ),
           ),
@@ -323,7 +427,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: (proveedor.estaCargando || !tieneActivos)
+            onPressed: (proveedor.estaCargando || !listoParaCalcular)
                 ? null
                 : () => _enviarFormulario(proveedor),
             style: ElevatedButton.styleFrom(

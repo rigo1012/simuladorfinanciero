@@ -87,6 +87,75 @@ class ProveedorSimulador extends ChangeNotifier {
   EstructuraCapital? _estructuraCapital;
   EstructuraCapital? get estructuraCapital => _estructuraCapital;
 
+  /// Configura la estructura de financiamiento (% Propio / % Deuda).
+  /// Reinicia datos posteriores (ingresos, costos, resultados).
+  void configurarFinanciamiento(EstructuraCapital estructura) {
+    _estructuraCapital = estructura;
+    _reiniciarDatosPostFinanciamiento();
+    notifyListeners();
+  }
+
+  /// Reinicia solo el financiamiento y datos posteriores.
+  void reiniciarFinanciamiento() {
+    _estructuraCapital = null;
+    _reiniciarDatosPostFinanciamiento();
+    notifyListeners();
+  }
+
+  /// Limpia ingresos, costos variables, costos fijos y resultados.
+  void _reiniciarDatosPostFinanciamiento() {
+    _ingresos.clear();
+    _costosVariables.clear();
+    _costosFijos.clear();
+    _ultimoResultado = null;
+    _error = null;
+  }
+
+  /// Getters de conveniencia para el Motor FEN
+  double get montoPrestamo => _estructuraCapital?.montoPrestamo ?? 0;
+  double get aportePropio => _estructuraCapital?.aportePropio ?? 0;
+  double get cuotaMensual => _estructuraCapital?.cuotaMensual ?? 0;
+  bool get tieneDeuda => _estructuraCapital?.tieneDeuda ?? false;
+
+  /// Cuotas totales en un periodo (para Flujo de Caja)
+  double cuotasEnPeriodo(int periodo, int mesesPorPeriodo) {
+    if (!tieneDeuda) return 0;
+    final mesInicio = (periodo - 1) * mesesPorPeriodo + 1;
+    final mesFin = periodo * mesesPorPeriodo;
+    final tabla = _estructuraCapital!.generarTablaAmortizacion();
+    if (mesInicio > tabla.length) return 0;
+    final fin = mesFin.clamp(0, tabla.length);
+    return tabla.sublist(mesInicio - 1, fin).fold(0.0, (s, a) => s + a.cuota);
+  }
+
+  /// Intereses en un periodo (para P&G / Estado de Resultados)
+  double interesesEnPeriodo(int periodo, int mesesPorPeriodo) {
+    if (!tieneDeuda) return 0;
+    final mesInicio = (periodo - 1) * mesesPorPeriodo + 1;
+    final mesFin = periodo * mesesPorPeriodo;
+    final tabla = _estructuraCapital!.generarTablaAmortizacion();
+    if (mesInicio > tabla.length) return 0;
+    final fin = mesFin.clamp(0, tabla.length);
+    return tabla.sublist(mesInicio - 1, fin).fold(0.0, (s, a) => s + a.interes);
+  }
+
+  /// Amortización de capital en un periodo (para Flujo de Caja)
+  double amortizacionCapitalEnPeriodo(int periodo, int mesesPorPeriodo) {
+    if (!tieneDeuda) return 0;
+    final mesInicio = (periodo - 1) * mesesPorPeriodo + 1;
+    final mesFin = periodo * mesesPorPeriodo;
+    final tabla = _estructuraCapital!.generarTablaAmortizacion();
+    if (mesInicio > tabla.length) return 0;
+    final fin = mesFin.clamp(0, tabla.length);
+    return tabla.sublist(mesInicio - 1, fin).fold(0.0, (s, a) => s + a.capital);
+  }
+
+  /// Saldo insoluto al final de un periodo (para liquidación final)
+  double saldoInsolutoEnPeriodo(int periodo, int mesesPorPeriodo) {
+    if (!tieneDeuda) return 0;
+    return _estructuraCapital!.saldoInsolutoEnPeriodo(periodo, mesesPorPeriodo);
+  }
+
   void _reiniciarDatosDependientes() {
     _activos.clear();
     _ingresos.clear();
