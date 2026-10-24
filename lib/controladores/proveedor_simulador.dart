@@ -197,6 +197,16 @@ class ProveedorSimulador extends ChangeNotifier {
     return _ingresos.length == total && _ingresos.every((i) => i.precio > 0 && i.demanda > 0);
   }
 
+  /// Verifica si todos los periodos tienen al menos un costo variable definido.
+  bool get costosVariablesCompletos {
+    if (!estaConfigurado) return false;
+    final total = configTemporal.totalPeriodos;
+    // Consideramos "completo" si hay al menos un item en cada periodo
+    // Opcionalmente se podría requerir items en las 3 categorías
+    return _costosVariables.length >= total && 
+           _costosVariables.every((c) => c.items.isNotEmpty);
+  }
+
   /// Getter para Motor FEN: ingreso de un periodo (0 si no definido).
   double ingresoEnPeriodo(int periodo) {
     final ing = obtenerIngreso(periodo);
@@ -208,6 +218,96 @@ class ProveedorSimulador extends ChangeNotifier {
     if (!estaConfigurado) return [];
     final total = configTemporal.totalPeriodos;
     return List.generate(total, (i) => ingresoEnPeriodo(i + 1));
+  }
+
+  // --- COSTOS VARIABLES (CRUD por periodo) ---
+  /// Agrega un item a un periodo específico (crea el periodo si no existe).
+  void agregarItemCostoVariable(int periodo, ItemCostoVariable item, int mesesPorPeriodo, double inflacionAnualPct) {
+    final index = _costosVariables.indexWhere((c) => c.periodo == periodo);
+    if (index != -1) {
+      // Agregar item al periodo existente
+      final itemsActualizados = [..._costosVariables[index].items, item];
+      _costosVariables[index] = _costosVariables[index].copyWith(items: itemsActualizados);
+    } else {
+      // Crear nuevo periodo
+      final nuevo = CostoVariablePeriodo(
+        periodo: periodo,
+        items: [item],
+        inflacionAnualPct: inflacionAnualPct,
+        mesesPorPeriodo: mesesPorPeriodo,
+      );
+      _costosVariables.add(nuevo);
+      _costosVariables.sort((a, b) => a.periodo.compareTo(b.periodo));
+    }
+    notifyListeners();
+  }
+
+  /// Actualiza un item existente en un periodo.
+  void actualizarItemCostoVariable(int periodo, ItemCostoVariable itemActualizado) {
+    final periodoIndex = _costosVariables.indexWhere((c) => c.periodo == periodo);
+    if (periodoIndex != -1) {
+      final items = _costosVariables[periodoIndex].items;
+      final itemIndex = items.indexWhere((i) => i.id == itemActualizado.id);
+      if (itemIndex != -1) {
+        items[itemIndex] = itemActualizado;
+        _costosVariables[periodoIndex] = _costosVariables[periodoIndex].copyWith(items: items);
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Elimina un item de un periodo.
+  void eliminarItemCostoVariable(int periodo, String itemId) {
+    final periodoIndex = _costosVariables.indexWhere((c) => c.periodo == periodo);
+    if (periodoIndex != -1) {
+      final items = _costosVariables[periodoIndex].items.where((i) => i.id != itemId).toList();
+      if (items.isEmpty) {
+        _costosVariables.removeAt(periodoIndex);
+      } else {
+        _costosVariables[periodoIndex] = _costosVariables[periodoIndex].copyWith(items: items);
+      }
+      notifyListeners();
+    }
+  }
+
+  /// Limpia todos los costos variables.
+  void limpiarCostosVariables() {
+    _costosVariables.clear();
+    notifyListeners();
+  }
+
+  /// Obtiene el CostoVariablePeriodo para un periodo (null si no existe).
+  CostoVariablePeriodo? obtenerCostosVariables(int periodo) {
+    try {
+      return _costosVariables.firstWhere((c) => c.periodo == periodo);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Getter para Motor FEN: costo variable total (con inflación) de un periodo.
+  double costoVariableEnPeriodo(int periodo) {
+    final cp = obtenerCostosVariables(periodo);
+    return cp?.costoConInflacion ?? 0;
+  }
+
+  /// Getter para Motor FEN: lista de costos variables por periodo (con inflación).
+  List<double> get costosVariablesPorPeriodo {
+    if (!estaConfigurado) return [];
+    final total = configTemporal.totalPeriodos;
+    return List.generate(total, (i) => costoVariableEnPeriodo(i + 1));
+  }
+
+  /// Getter para Motor FEN: desglose por categoría en un periodo.
+  Map<String, double> desgloseCostosVariablesEnPeriodo(int periodo) {
+    final cp = obtenerCostosVariables(periodo);
+    if (cp == null) return {'materiaPrima': 0, 'manoObra': 0, 'cargosIndirectos': 0, 'total': 0};
+    return {
+      'materiaPrima': cp.subtotalMateriaPrima * cp.factorInflacion,
+      'manoObra': cp.subtotalManoObra * cp.factorInflacion,
+      'cargosIndirectos': cp.subtotalCargosIndirectos * cp.factorInflacion,
+      'total': cp.costoConInflacion,
+    };
   }
 
   void _reiniciarDatosDependientes() {
