@@ -5,6 +5,7 @@ import '../controladores/proveedor_simulador.dart';
 import 'seccion_activos.dart';
 import 'seccion_ingresos.dart';
 import 'seccion_costos_variables.dart';
+import 'seccion_costos_fijos.dart';
 import 'vista_config_temporal.dart';
 import 'vista_financiamiento.dart';
 
@@ -108,14 +109,21 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                   const SizedBox(height: 24),
 
                   // === PASO 4: COSTOS VARIABLES ===
-                  _buildStepIndicator(4, 6, 'Costos Variables'),
+                  _buildStepIndicator(4, 7, 'Costos Variables'),
                   const SeccionCostosVariables(),
                   const SizedBox(height: 32),
                   Divider(color: Colors.grey.shade300, thickness: 1),
                   const SizedBox(height: 24),
 
-                  // === PASO 5: PARÁMETROS FINANCIEROS ===
-                  _buildStepIndicator(5, 6, 'Parámetros de Evaluación'),
+                  // === PASO 5: COSTOS FIJOS ===
+                  _buildStepIndicator(5, 7, 'Costos Fijos'),
+                  const SeccionCostosFijos(),
+                  const SizedBox(height: 32),
+                  Divider(color: Colors.grey.shade300, thickness: 1),
+                  const SizedBox(height: 24),
+
+                  // === PASO 6: PARÁMETROS FINANCIEROS ===
+                  _buildStepIndicator(6, 7, 'Parámetros de Evaluación'),
 
                   const Text(
                     'Parámetros de Evaluación Financiera',
@@ -358,7 +366,8 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
     final montoTotal = proveedor.inversionRequerida.total;
     final ingresosCompletos = proveedor.ingresosCompletos;
     final costosVariablesCompletos = proveedor.costosVariablesCompletos;
-    final listoParaCalcular = tieneActivos && tieneFinanciamiento && ingresosCompletos && costosVariablesCompletos;
+    final costosFijosCompletos = proveedor.costosFijosCompletos;
+    final listoParaCalcular = tieneActivos && tieneFinanciamiento && ingresosCompletos && costosVariablesCompletos && costosFijosCompletos;
 
     return Column(
       children: [
@@ -444,6 +453,28 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 Expanded(
                   child: Text(
                     'Complete Costos Variables en Paso 4',
+                    style: TextStyle(color: Colors.orange.shade800),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (!costosFijosCompletos)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Complete Costos Fijos en Paso 5',
                     style: TextStyle(color: Colors.orange.shade800),
                   ),
                 ),

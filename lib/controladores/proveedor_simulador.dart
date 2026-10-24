@@ -207,6 +207,14 @@ class ProveedorSimulador extends ChangeNotifier {
            _costosVariables.every((c) => c.items.isNotEmpty);
   }
 
+  /// Verifica si todos los periodos tienen al menos un costo fijo definido.
+  bool get costosFijosCompletos {
+    if (!estaConfigurado) return false;
+    final total = configTemporal.totalPeriodos;
+    return _costosFijos.length >= total && 
+           _costosFijos.every((c) => c.items.isNotEmpty);
+  }
+
   /// Getter para Motor FEN: ingreso de un periodo (0 si no definido).
   double ingresoEnPeriodo(int periodo) {
     final ing = obtenerIngreso(periodo);
@@ -308,6 +316,81 @@ class ProveedorSimulador extends ChangeNotifier {
       'cargosIndirectos': cp.subtotalCargosIndirectos * cp.factorInflacion,
       'total': cp.costoConInflacion,
     };
+  }
+
+  // --- COSTOS FIJOS (CRUD por periodo) ---
+  /// Agrega un item a un periodo específico (crea el periodo si no existe).
+  void agregarItemCostoFijo(int periodo, ItemCostoFijo item) {
+    final index = _costosFijos.indexWhere((c) => c.periodo == periodo);
+    if (index != -1) {
+      final itemsActualizados = [..._costosFijos[index].items, item];
+      _costosFijos[index] = _costosFijos[index].copyWith(items: itemsActualizados);
+    } else {
+      final nuevo = CostoFijoPeriodo(
+        periodo: periodo,
+        items: [item],
+        inflacionAnualPct: 0, // Se usa la global de la UI
+        mesesPorPeriodo: configTemporal?.mesesPorPeriodo ?? 1,
+      );
+      _costosFijos.add(nuevo);
+      _costosFijos.sort((a, b) => a.periodo.compareTo(b.periodo));
+    }
+    notifyListeners();
+  }
+
+  /// Actualiza un item existente (elimina y agrega el actualizado).
+  void actualizarItemCostoFijo(int periodo, ItemCostoFijo itemActualizado) {
+    // Como ItemCostoFijo es inmutable, eliminamos y agregamos
+    eliminarItemCostoFijo(periodo, itemActualizado.id);
+    agregarItemCostoFijo(periodo, itemActualizado);
+  }
+
+  /// Elimina un item de un periodo.
+  void eliminarItemCostoFijo(int periodo, String itemId) {
+    final periodoIndex = _costosFijos.indexWhere((c) => c.periodo == periodo);
+    if (periodoIndex != -1) {
+      final items = _costosFijos[periodoIndex].items.where((i) => i.id != itemId).toList();
+      if (items.isEmpty) {
+        _costosFijos.removeAt(periodoIndex);
+      } else {
+        _costosFijos[periodoIndex] = _costosFijos[periodoIndex].copyWith(items: items);
+      }
+      notifyListeners();
+    }
+  }
+
+  /// Limpia todos los costos fijos.
+  void limpiarCostosFijos() {
+    _costosFijos.clear();
+    notifyListeners();
+  }
+
+  /// Obtiene el CostoFijoPeriodo para un periodo (null si no existe).
+  CostoFijoPeriodo? obtenerCostosFijos(int periodo) {
+    try {
+      return _costosFijos.firstWhere((c) => c.periodo == periodo);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Getter para Motor FEN: costo fijo total (con inflación donde aplique) de un periodo.
+  double costoFijoEnPeriodo(int periodo, double inflacionGlobal) {
+    final cp = obtenerCostosFijos(periodo);
+    if (cp == null) return 0;
+    // Recalcular con inflación global actual
+    double total = 0;
+    for (final item in cp.items) {
+      total += item.costoConInflacion(periodo, configTemporal?.mesesPorPeriodo ?? 1, inflacionGlobal);
+    }
+    return total;
+  }
+
+  /// Getter para Motor FEN: lista de costos fijos por periodo.
+  List<double> costosFijosPorPeriodo(double inflacionGlobal) {
+    if (!estaConfigurado) return [];
+    final total = configTemporal!.totalPeriodos;
+    return List.generate(total, (i) => costoFijoEnPeriodo(i + 1, inflacionGlobal));
   }
 
   void _reiniciarDatosDependientes() {
