@@ -45,6 +45,14 @@ dependencies:
   # Gráficos para dashboard
   fl_chart: ^0.69.0
 
+  # PDF generation and printing
+  pdf: ^3.11.0
+  printing: ^5.13.0
+
+dependency_overrides:
+  # Fix for ZLibDecoder issue with image 4.11.0
+  image: 4.10.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

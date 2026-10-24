@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'vista_formulario_inversion.dart';
 import 'vista_dashboard.dart';
+import 'vista_resultados.dart';
 import '../controladores/proveedor_simulador.dart';
 
 class DisenoEscritorio extends StatefulWidget {
@@ -17,12 +18,17 @@ class _DisenoEscritorioState extends State<DisenoEscritorio> {
   final List<Widget> _pantallas = [
     const VistaFormularioInversion(),
     const VistaDashboard(),
+    const VistaResultados(),
   ];
 
   void _cambiarPestana(int indice) {
     if (indice == 1) {
       // Dispara la lectura a SQLite sin bloquear la animación visual de la pestaña
       context.read<ProveedorSimulador>().cargarHistorial();
+    }
+    if (indice == 2) {
+      // Asegurar contexto para PDF en resultados
+      context.read<ProveedorSimulador>().setContext(context);
     }
     
     setState(() {
@@ -47,6 +53,7 @@ class _DisenoEscritorioState extends State<DisenoEscritorio> {
               destinations: const [
                 NavigationRailDestination(icon: Icon(Icons.attach_money), label: Text('Inversión')),
                 NavigationRailDestination(icon: Icon(Icons.bar_chart), label: Text('Dashboard')),
+                NavigationRailDestination(icon: Icon(Icons.assessment), label: Text('Resultados')),
               ],
             ),
           if (!esEstrecha) const VerticalDivider(thickness: 1, width: 1),
@@ -65,6 +72,7 @@ class _DisenoEscritorioState extends State<DisenoEscritorio> {
               items: const [
                 BottomNavigationBarItem(icon: Icon(Icons.attach_money), label: 'Inversión'),
                 BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Dashboard'),
+                BottomNavigationBarItem(icon: Icon(Icons.assessment), label: 'Resultados'),
               ],
             )
           : null,

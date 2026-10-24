@@ -7,6 +7,8 @@ import '../modelos/ingreso_periodo.dart';
 import '../modelos/costo_variable.dart';
 import '../modelos/costo_fijo.dart';
 import '../modelos/estructura_capital.dart';
+import '../servicios/motor_fen.dart';
+import '../servicios/evaluador_financiero.dart';
 import '../nucleo/dbayuda.dart';
 
 /// Proveedor principal del simulador financiero para sistemas de riego.
@@ -19,6 +21,20 @@ class ProveedorSimulador extends ChangeNotifier {
   List<Map<String, dynamic>> _historial = [];
   String? _error;
   Map<String, dynamic>? _ultimoResultado;
+
+  // Contexto para operaciones que lo requieren (PDF, dialogs)
+  BuildContext? _context;
+  BuildContext? get context => _context;
+  void setContext(BuildContext ctx) => _context = ctx;
+
+  // Últimos parámetros usados en simulación
+  double _ultimaTREMA = 0;
+  int _ultimoHorizonte = 0;
+  double _inflacionGlobalFijos = 0; // Guardada desde la UI de Costos Fijos
+  double get ultimaTREMA => _ultimaTREMA;
+  int get ultimoHorizonte => _ultimoHorizonte;
+  double get inflacionGlobalFijos => _inflacionGlobalFijos;
+  void setInflacionGlobalFijos(double v) { _inflacionGlobalFijos = v; notifyListeners(); }
 
   // --- ACTIVOS (Inversión Requerida) ---
   final List<Activo> _activos = [];
@@ -604,28 +620,84 @@ class ProveedorSimulador extends ChangeNotifier {
     }
   }
 
-  /// Versión simplificada para compatibilidad con el formulario actual
-  /// (usa la Inversión Requerida calculada desde los Activos).
+  /// Ejecuta la simulación completa: Motor FEN + Evaluador Financiero.
+  /// Guarda el resultado completo en _ultimoResultado para la vista de resultados y PDF.
   Future<void> procesarSimulacionSimple(double tasaPct, int anios) async {
-    final monto = inversionRequerida.total;
-    if (monto <= 0) {
-      _error = 'Debe agregar al menos un activo para calcular la Inversión Requerida';
+    // Guardar parámetros para recálculo y PDF
+    _ultimaTREMA = tasaPct;
+    _ultimoHorizonte = anios;
+
+    // Validaciones previas
+    if (!estaConfigurado) {
+      _error = 'Falta configuración temporal (Paso 0)';
       notifyListeners();
       return;
     }
-    await procesarSimulacion(
-      monto: monto,
-      tasaDescuentoPct: tasaPct,
-      horizonteAnios: anios,
-      // Valores por defecto razonables (ajustar según PDF)
-      hectareas: 50,
-      rendimientoBase: 4.0,
-      rendimientoConRiego: 8.5,
-      precioTonelada: 3500,
-      costoOperacionAnual: 120000,
-      costoAguaAnual: 30000,
-      valorResidualPct: 0.1,
-    );
+    if (inversionRequerida.activos.isEmpty) {
+      _error = 'Debe agregar al menos un activo (Paso 1)';
+      notifyListeners();
+      return;
+    }
+    if (estructuraCapital == null) {
+      _error = 'Falta estructura de financiamiento (Paso 2)';
+      notifyListeners();
+      return;
+    }
+    if (!ingresosCompletos) {
+      _error = 'Faltan ingresos estimados (Paso 3)';
+      notifyListeners();
+      return;
+    }
+    if (!costosVariablesCompletos) {
+      _error = 'Faltan costos variables (Paso 4)';
+      notifyListeners();
+      return;
+    }
+    if (!costosFijosCompletos) {
+      _error = 'Faltan costos fijos (Paso 5)';
+      notifyListeners();
+      return;
+    }
+
+    _cargando = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // 1. Motor FEN: construye flujos de caja completos
+      final motor = MotorFEN.calcular(
+        proveedor: this,
+        tremaPct: tasaPct,
+        horizonteAnios: anios,
+        valorResidualPct: 0.1, // 10% por defecto
+      );
+
+      // 2. Evaluador Financiero: calcula VPN, TIR, Payback, B/C, etc.
+      final evaluacion = EvaluadorFinanciero.evaluar(motor);
+
+      // 3. Guardar en BD (registro simple para historial)
+      final inversion = Inversion(
+        monto: motor.inversionRequerida,
+        tasaDescuento: motor.trema,
+        horizonteAnios: motor.horizontePeriodos,
+        van: evaluacion.vpn,
+      );
+      final db = await _db.baseDatos;
+      await db.insert('inversion', inversion.aMapa());
+
+      // 4. Preparar resultado COMPLETO para Vista Resultados y PDF
+      _ultimoResultado = evaluacion.toMap();
+      
+      // 5. Recargar historial
+      await cargarHistorial();
+      
+    } catch (e, stack) {
+      _error = 'Error en simulación completa: $e';
+      debugPrint('ProveedorSimulador error: $e\n$stack');
+    } finally {
+      _cargando = false;
+      notifyListeners();
+    }
   }
 
   /// Carga el historial de simulaciones desde SQLite.

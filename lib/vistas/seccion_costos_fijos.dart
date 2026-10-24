@@ -21,9 +21,22 @@ class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
   final _inflacionGlobalCtrl = TextEditingController(text: '5.0');
 
   @override
+  void initState() {
+    super.initState();
+    _inflacionGlobalCtrl.addListener(_actualizarInflacionGlobal);
+  }
+
+  @override
   void dispose() {
+    _inflacionGlobalCtrl.removeListener(_actualizarInflacionGlobal);
     _inflacionGlobalCtrl.dispose();
     super.dispose();
+  }
+
+  void _actualizarInflacionGlobal() {
+    final prov = context.read<ProveedorSimulador>();
+    final valor = double.tryParse(_inflacionGlobalCtrl.text) ?? 0.0;
+    prov.setInflacionGlobalFijos(valor);
   }
 
   @override

@@ -26,6 +26,9 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   void _enviarFormulario(ProveedorSimulador proveedor) {
     if (proveedor.estaCargando) return;
 
+    // Pasar contexto para PDF/dialogs
+    proveedor.setContext(context);
+
     // Validar que haya activos
     if (proveedor.inversionRequerida.activos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
