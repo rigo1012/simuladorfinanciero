@@ -72,132 +72,118 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
             key: _llaveFormulario,
             child: ListView(
               children: [
-                // === PASO 0: CONFIGURACIÓN TEMPORAL (OBLIGATORIO) ===
-                if (!estaConfigurado) ...[
-                  const VistaConfigTemporal(),
-                  const SizedBox(height: 24),
-                  _buildStepIndicator(0, _totalPasos, 'Configuración Temporal'),
-                ] else ...[
-                  // Mostrar resumen de configuración y botón para cambiarla
-                  _buildConfigSummary(proveedor),
-                  const SizedBox(height: 24),
-                  _buildStepIndicator(1, _totalPasos, 'Activos e Inversión'),
-                  
-                  // === PASO 1: SECCIÓN ACTIVOS ===
-                  const SeccionActivos(),
-                  const SizedBox(height: 32),
+                // === PASO 0: CONFIGURACIÓN TEMPORAL SEMPRE VISIBLE ===
+                const VistaConfigTemporal(),
+                const SizedBox(height: 24),
+                _buildStepIndicator(0, _totalPasos, 'Configuración Temporal'),
+                
+                // === PASO 1: SECCIÓN ACTIVOS ===
+                const SeccionActivos(),
+                const SizedBox(height: 32),
 
-                  // Divisor visual
-                  Divider(color: Colors.grey.shade300, thickness: 1),
-                  const SizedBox(height: 24),
+                // Divisor visual
+                Divider(color: Colors.grey.shade300, thickness: 1),
+                const SizedBox(height: 24),
 
-                  // === PASO 2: FINANCIAMIENTO (si no configurado) O RESUMEN ===
-                  if (!tieneFinanciamiento) ...[
-                    _buildStepIndicator(2, _totalPasos, 'Estructura de Financiamiento'),
-                    const VistaFinanciamiento(),
-                    const SizedBox(height: 32),
-                    Divider(color: Colors.grey.shade300, thickness: 1),
-                    const SizedBox(height: 24),
-                  ] else ...[
-                    _buildFinanciamientoSummary(proveedor),
-                    const SizedBox(height: 24),
-                    Divider(color: Colors.grey.shade300, thickness: 1),
-                    const SizedBox(height: 24),
+                // === PASO 2: FINANCIAMIENTO SEMPRE VISIBLE ===
+                _buildStepIndicator(2, _totalPasos, 'Estructura de Financiamiento'),
+                const VistaFinanciamiento(),
+                const SizedBox(height: 32),
+                Divider(color: Colors.grey.shade300, thickness: 1),
+                const SizedBox(height: 24),
+
+                // === PASO 3: INGRESOS ESTIMADOS ===
+                _buildStepIndicator(3, _totalPasos, 'Ingresos Estimados'),
+                const SeccionIngresos(),
+                const SizedBox(height: 32),
+                Divider(color: Colors.grey.shade300, thickness: 1),
+                const SizedBox(height: 24),
+
+                // === PASO 4: COSTOS VARIABLES ===
+                _buildStepIndicator(4, _totalPasos, 'Costos Variables'),
+                const SeccionCostosVariables(),
+                const SizedBox(height: 32),
+                Divider(color: Colors.grey.shade300, thickness: 1),
+                const SizedBox(height: 24),
+
+                // === PASO 5: COSTOS FIJOS ===
+                _buildStepIndicator(5, _totalPasos, 'Costos Fijos'),
+                const SeccionCostosFijos(),
+                const SizedBox(height: 32),
+                Divider(color: Colors.grey.shade300, thickness: 1),
+                const SizedBox(height: 24),
+
+                // === PASO 6: PARÁMETROS FINANCIEROS ===
+                _buildStepIndicator(6, 7, 'Parámetros de Evaluación'),
+
+                const Text(
+                  'Parámetros de Evaluación Financiera',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'La Tasa de Descuento (TREMA) es la rentabilidad mínima esperada. '
+                  'El Horizonte debe ser ≤ a los años de proyección configurados.',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+
+                // Campo 1: Tasa de Descuento (TREMA)
+                TextFormField(
+                  controller: _tasaCtrl,
+                  focusNode: _nodoTasa,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_nodoAnios),
+                  decoration: const InputDecoration(
+                    labelText: 'Tasa de Descuento - TREMA (%) *',
+                    hintText: 'Ej: 12.5',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.percent),
+                    helperText: 'Tasa Mínima de Rentabilidad Esperada',
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
                   ],
+                  validator: (valor) {
+                    if (valor == null || valor.isEmpty) return 'Requerido';
+                    final numero = double.tryParse(valor);
+                    if (numero == null) return 'Número inválido';
+                    if (numero <= 0 || numero > 100) return 'La tasa debe estar entre 0.01 y 100';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
 
-                  // === PASO 3: INGRESOS ESTIMADOS ===
-                  _buildStepIndicator(3, _totalPasos, 'Ingresos Estimados'),
-                  const SeccionIngresos(),
-                  const SizedBox(height: 32),
-                  Divider(color: Colors.grey.shade300, thickness: 1),
-                  const SizedBox(height: 24),
-
-                  // === PASO 4: COSTOS VARIABLES ===
-                  _buildStepIndicator(4, _totalPasos, 'Costos Variables'),
-                  const SeccionCostosVariables(),
-                  const SizedBox(height: 32),
-                  Divider(color: Colors.grey.shade300, thickness: 1),
-                  const SizedBox(height: 24),
-
-                  // === PASO 5: COSTOS FIJOS ===
-                  _buildStepIndicator(5, _totalPasos, 'Costos Fijos'),
-                  const SeccionCostosFijos(),
-                  const SizedBox(height: 32),
-                  Divider(color: Colors.grey.shade300, thickness: 1),
-                  const SizedBox(height: 24),
-
-                  // === PASO 6: PARÁMETROS FINANCIEROS ===
-                  _buildStepIndicator(6, 7, 'Parámetros de Evaluación'),
-
-                  const Text(
-                    'Parámetros de Evaluación Financiera',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                // Campo 2: Horizonte de Evaluación
+                TextFormField(
+                  controller: _aniosCtrl,
+                  focusNode: _nodoAnios,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _enviarFormulario(context.read<ProveedorSimulador>()),
+                  decoration: InputDecoration(
+                    labelText: 'Horizonte de Evaluación (Años) *',
+                    hintText: 'Ej: 5',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    helperText: 'Máx. ${proveedor.configTemporal?.anosProyeccion ?? 0} años (configuración temporal)',
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'La Tasa de Descuento (TREMA) es la rentabilidad mínima esperada. '
-                    'El Horizonte debe ser ≤ a los años de proyección configurados.',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 16),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  validator: (valor) {
+                    if (valor == null || valor.isEmpty) return 'Requerido';
+                    final numero = int.tryParse(valor);
+                    if (numero == null) return 'Debe ser un número entero';
+                    if (numero <= 0) return 'El horizonte debe ser de al menos 1 año';
+                    final maxAnos = proveedor.configTemporal?.anosProyeccion ?? 0;
+                    if (numero > maxAnos) return 'No puede exceder los $maxAnos años de proyección';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 32),
 
-                  // Campo 1: Tasa de Descuento (TREMA)
-                  TextFormField(
-                    controller: _tasaCtrl,
-                    focusNode: _nodoTasa,
-                    textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_nodoAnios),
-                    decoration: const InputDecoration(
-                      labelText: 'Tasa de Descuento - TREMA (%) *',
-                      hintText: 'Ej: 12.5',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.percent),
-                      helperText: 'Tasa Mínima de Rentabilidad Esperada',
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
-                    ],
-                    validator: (valor) {
-                      if (valor == null || valor.isEmpty) return 'Requerido';
-                      final numero = double.tryParse(valor);
-                      if (numero == null) return 'Número inválido';
-                      if (numero <= 0 || numero > 100) return 'La tasa debe estar entre 0.01 y 100';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Campo 2: Horizonte de Evaluación
-                  TextFormField(
-                    controller: _aniosCtrl,
-                    focusNode: _nodoAnios,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _enviarFormulario(context.read<ProveedorSimulador>()),
-                    decoration: InputDecoration(
-                      labelText: 'Horizonte de Evaluación (Años) *',
-                      hintText: 'Ej: 5',
-                      border: const OutlineInputBorder(),
-                      prefixIcon: const Icon(Icons.calendar_today),
-                      helperText: 'Máx. ${proveedor.configTemporal.anosProyeccion} años (configuración temporal)',
-                    ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    validator: (valor) {
-                      if (valor == null || valor.isEmpty) return 'Requerido';
-                      final numero = int.tryParse(valor);
-                      if (numero == null) return 'Debe ser un número entero';
-                      if (numero <= 0) return 'El horizonte debe ser de al menos 1 año';
-                      final maxAnos = proveedor.configTemporal.anosProyeccion;
-                      if (numero > maxAnos) return 'No puede exceder los $maxAnos años de proyección';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Botón Calcular
-                  _buildCalculateButton(proveedor, tieneFinanciamiento),
-                ],
+                // Botón Calcular
+                _buildCalculateButton(proveedor, tieneFinanciamiento),
               ],
             ),
           ),
@@ -434,7 +420,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Complete Ingresos Estimados en Paso 3 (${proveedor.configTemporal.totalPeriodos} periodos)',
+                    'Complete Ingresos Estimados en Paso 3 (${proveedor.configTemporal?.totalPeriodos ?? 0} periodos)',
                     style: TextStyle(color: Colors.orange.shade800),
                   ),
                 ),
