@@ -18,6 +18,7 @@ class VistaFormularioInversion extends StatefulWidget {
 
 class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   final _llaveFormulario = GlobalKey<FormState>();
+  static const int _totalPasos = 7;
   final TextEditingController _tasaCtrl = TextEditingController();
   final TextEditingController _aniosCtrl = TextEditingController();
   final FocusNode _nodoTasa = FocusNode();
@@ -75,12 +76,12 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 if (!estaConfigurado) ...[
                   const VistaConfigTemporal(),
                   const SizedBox(height: 24),
-                  _buildStepIndicator(0, 4, 'Configuración Temporal'),
+                  _buildStepIndicator(0, _totalPasos, 'Configuración Temporal'),
                 ] else ...[
                   // Mostrar resumen de configuración y botón para cambiarla
                   _buildConfigSummary(proveedor),
                   const SizedBox(height: 24),
-                  _buildStepIndicator(1, 4, 'Activos e Inversión'),
+                  _buildStepIndicator(1, _totalPasos, 'Activos e Inversión'),
                   
                   // === PASO 1: SECCIÓN ACTIVOS ===
                   const SeccionActivos(),
@@ -92,7 +93,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
 
                   // === PASO 2: FINANCIAMIENTO (si no configurado) O RESUMEN ===
                   if (!tieneFinanciamiento) ...[
-                    _buildStepIndicator(2, 4, 'Estructura de Financiamiento'),
+                    _buildStepIndicator(2, _totalPasos, 'Estructura de Financiamiento'),
                     const VistaFinanciamiento(),
                     const SizedBox(height: 32),
                     Divider(color: Colors.grey.shade300, thickness: 1),
@@ -105,21 +106,21 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                   ],
 
                   // === PASO 3: INGRESOS ESTIMADOS ===
-                  _buildStepIndicator(3, 6, 'Ingresos Estimados'),
+                  _buildStepIndicator(3, _totalPasos, 'Ingresos Estimados'),
                   const SeccionIngresos(),
                   const SizedBox(height: 32),
                   Divider(color: Colors.grey.shade300, thickness: 1),
                   const SizedBox(height: 24),
 
                   // === PASO 4: COSTOS VARIABLES ===
-                  _buildStepIndicator(4, 7, 'Costos Variables'),
+                  _buildStepIndicator(4, _totalPasos, 'Costos Variables'),
                   const SeccionCostosVariables(),
                   const SizedBox(height: 32),
                   Divider(color: Colors.grey.shade300, thickness: 1),
                   const SizedBox(height: 24),
 
                   // === PASO 5: COSTOS FIJOS ===
-                  _buildStepIndicator(5, 7, 'Costos Fijos'),
+                  _buildStepIndicator(5, _totalPasos, 'Costos Fijos'),
                   const SeccionCostosFijos(),
                   const SizedBox(height: 32),
                   Divider(color: Colors.grey.shade300, thickness: 1),
