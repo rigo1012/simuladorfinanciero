@@ -112,10 +112,10 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
           child: Row(
             children: [
               SizedBox(width: 80, child: Text('PERÍODO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
-              SizedBox(width: 140, child: Text('PRECIO UNITARIO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-              SizedBox(width: 140, child: Text('DEMANDA (UNIDADES)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-              SizedBox(width: 160, child: Text('INGRESO CALCULADO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
-              SizedBox(width: 60, child: Text('ACCIONES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
+              SizedBox(width: 120, child: Text('PRECIO UNITARIO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
+              SizedBox(width: 120, child: Text('DEMANDA (UNIDADES)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
+              SizedBox(width: 150, child: Text('INGRESO CALCULADO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
+              SizedBox(width: 96, child: Text('ACCIONES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
             ],
           ),
         ),
@@ -451,7 +451,7 @@ class _IngresoRowState extends State<_IngresoRow> {
           ),
           // Precio
           SizedBox(
-            width: 140,
+            width: 120,
             child: _editando
                 ? TextFormField(
                     controller: _precioCtrl,
@@ -469,7 +469,7 @@ class _IngresoRowState extends State<_IngresoRow> {
           ),
           // Demanda
           SizedBox(
-            width: 140,
+            width: 120,
             child: _editando
                 ? TextFormField(
                     controller: _demandaCtrl,
@@ -487,7 +487,7 @@ class _IngresoRowState extends State<_IngresoRow> {
           ),
           // Ingreso (solo lectura, calculado)
           SizedBox(
-            width: 160,
+            width: 150,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               decoration: BoxDecoration(
@@ -508,19 +508,22 @@ class _IngresoRowState extends State<_IngresoRow> {
           ),
           // Acciones
           SizedBox(
-            width: 60,
+            width: 96,
             child: _editando
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                ? Wrap(
+                    spacing: 4,
+                    alignment: WrapAlignment.center,
                     children: [
-                      IconButton(
+                      _buildActionIcon(
                         tooltip: 'Guardar',
-                        icon: Icon(Icons.check, color: Colors.green.shade700, size: 20),
+                        icon: Icons.check,
+                        color: Colors.green.shade700,
                         onPressed: _toggleEdit,
                       ),
-                      IconButton(
+                      _buildActionIcon(
                         tooltip: 'Cancelar',
-                        icon: Icon(Icons.close, color: Colors.grey.shade600, size: 20),
+                        icon: Icons.close,
+                        color: Colors.grey.shade600,
                         onPressed: () => setState(() {
                           _editando = false;
                           _precioCtrl.text = widget.precioInicial?.toStringAsFixed(2) ?? '';
@@ -529,26 +532,29 @@ class _IngresoRowState extends State<_IngresoRow> {
                       ),
                     ],
                   )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
+                : Wrap(
+                    spacing: 4,
+                    alignment: WrapAlignment.center,
                     children: [
                       if (tieneDatos)
-                        IconButton(
+                        _buildActionIcon(
                           tooltip: 'Editar',
-                          icon: Icon(Icons.edit_outlined, color: Colors.teal.shade600, size: 20),
+                          icon: Icons.edit_outlined,
+                          color: Colors.teal.shade600,
                           onPressed: () => setState(() => _editando = true),
                         ),
                       if (tieneDatos)
-                        IconButton(
+                        _buildActionIcon(
                           tooltip: 'Eliminar',
-                          icon: Icon(Icons.delete_outline, color: Colors.red.shade600, size: 20),
+                          icon: Icons.delete_outline,
+                          color: Colors.red.shade600,
                           onPressed: () => _confirmarEliminar(context),
                         )
                       else
-                        IconButton(
+                        _buildActionIcon(
                           tooltip: 'Agregar',
-                          icon: Icon(Icons.add_circle_outline, color: Colors.teal.shade600, size: 20),
+                          icon: Icons.add_circle_outline,
+                          color: Colors.teal.shade600,
                           onPressed: () => setState(() => _editando = true),
                         ),
                     ],
@@ -556,6 +562,22 @@ class _IngresoRowState extends State<_IngresoRow> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildActionIcon({
+    required String tooltip,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon, color: color, size: 20),
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
     );
   }
 
