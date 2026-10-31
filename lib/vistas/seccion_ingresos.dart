@@ -24,19 +24,8 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
   Widget build(BuildContext context) {
     return Consumer<ProveedorSimulador>(
       builder: (context, proveedor, _) {
-        // Validar prerrequisitos
-        if (!proveedor.estaConfigurado) {
-          return _buildPrerequisitoFaltante('Configuración Temporal (Paso 0)');
-        }
-        if (proveedor.inversionRequerida.activos.isEmpty) {
-          return _buildPrerequisitoFaltante('Activos e Inversión (Paso 1)');
-        }
-        if (proveedor.estructuraCapital == null) {
-          return _buildPrerequisitoFaltante('Estructura de Financiamiento (Paso 2)');
-        }
-
         final config = proveedor.configTemporal;
-        final totalPeriodos = config.totalPeriodos;
+        final totalPeriodos = config?.totalPeriodos ?? 0;
         final ingresos = proveedor.ingresos;
 
         return Column(
@@ -59,28 +48,6 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildPrerequisitoFaltante(String paso) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          Icon(Icons.hourglass_empty, size: 64, color: Colors.orange.shade300),
-          const SizedBox(height: 16),
-          Text(
-            'Paso previo requerido',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Complete primero: $paso',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
-          ),
-        ],
-      ),
     );
   }
 
@@ -124,6 +91,10 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
     // Crear mapa para acceso rápido
     final mapaIngresos = {for (var i in ingresos) i.periodo: i};
 
+    // Determinar cuántos periodos mostrar inicialmente (máx 5) y cuántos faltan
+    int periodosAMostrar = totalPeriodos > 5 ? 5 : totalPeriodos;
+    int periodosFaltantes = totalPeriodos - periodosAMostrar;
+
     return Column(
       children: [
         // Encabezado tabla
@@ -133,7 +104,7 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
             color: Colors.teal.shade100,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
           ),
-          child: const Row(
+          child: Row(
             children: [
               SizedBox(width: 80, child: Text('PERÍODO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12))),
               SizedBox(width: 140, child: Text('PRECIO UNITARIO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12), textAlign: TextAlign.center)),
@@ -143,34 +114,55 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
             ],
           ),
         ),
-        // Filas
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: totalPeriodos,
-          separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade200),
-          itemBuilder: (context, index) {
-            final periodo = index + 1;
-            final ingreso = mapaIngresos[periodo];
-            final tieneDatos = ingreso != null;
-            
-            return _IngresoRow(
-              periodo: periodo,
-              precioInicial: tieneDatos ? ingreso.precio : null,
-              demandaInicial: tieneDatos ? ingreso.demanda : null,
-              onSave: (precio, demanda) => proveedor.actualizarIngreso(
-                IngresoPeriodo(periodo: periodo, precio: precio, demanda: demanda),
-              ),
-              onDelete: () => proveedor.eliminarIngreso(periodo),
-            );
-          },
-        ),
+        // Filas - solo mostramos los periodos iniciales y un botón para agregar más
+        _buildPeriodosRows(proveedor, periodosAMostrar, mapaIngresos, periodosFaltantes, totalPeriodos),
+        // Botón para agregar más periodos si faltan
+        if (periodosFaltantes > 0) ...[
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => _showAddMorePeriodsDialog(proveedor, periodosFaltantes),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_circle_outline, size: 16, color: Colors.teal.shade700),
+                const SizedBox(width: 4),
+                Text('Agregar los siguientes $periodosFaltantes periodos', style: TextStyle(fontSize: 12, color: Colors.teal.shade700)),
+              ],
+            ),
+          ),
+        ] else ...[
+          const SizedBox.shrink(),
+        ],
         // Borde inferior
         Container(
           height: 1,
           color: Colors.grey.shade300,
         ),
       ],
+    );
+  }
+
+  Widget _buildPeriodosRows(ProveedorSimulador proveedor, int count, Map<int, IngresoPeriodo> mapaIngresos, int periodosFaltantes, int totalPeriodos) {
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: count,
+      separatorBuilder: (context, index) => Divider(height: 1, color: Colors.grey.shade200),
+      itemBuilder: (context, index) {
+        final periodo = index + 1;
+        final ingreso = mapaIngresos[periodo];
+        final tieneDatos = ingreso != null;
+        
+        return _IngresoRow(
+          periodo: periodo,
+          precioInicial: tieneDatos ? ingreso.precio : null,
+          demandaInicial: tieneDatos ? ingreso.demanda : null,
+          onSave: (precio, demanda) => proveedor.actualizarIngreso(
+            IngresoPeriodo(periodo: periodo, precio: precio, demanda: demanda),
+          ),
+          onDelete: () => proveedor.eliminarIngreso(periodo),
+        );
+      },
     );
   }
 
@@ -333,6 +325,80 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
     );
   }
 
+  Future<void> _showAddMorePeriodsDialog(ProveedorSimulador proveedor, int periodosFaltantes) async {
+    final periodoCtrl = TextEditingController(text: '1');
+    final precioCtrl = TextEditingController();
+    final demandaCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Agregar $periodosFaltantes periodos más'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Se agregarán $periodosFaltantes periodos adicionales al final.',
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: periodoCtrl,
+                decoration: const InputDecoration(labelText: 'Periodo inicial (default: 1)', border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: precioCtrl,
+                decoration: const InputDecoration(labelText: 'Precio unitario base', prefixText: '\$ ', border: OutlineInputBorder()),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: demandaCtrl,
+                decoration: const InputDecoration(labelText: 'Demanda base', border: OutlineInputBorder()),
+                keyboardType: TextInputType.number,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              final periodoInicial = int.tryParse(periodoCtrl.text) ?? 1;
+              final precioBase = double.tryParse(precioCtrl.text) ?? 0;
+              final demandaBase = double.tryParse(demandaCtrl.text) ?? 0;
+
+              if (precioBase <= 0 || demandaBase <= 0) return;
+
+              for (int p = 0; p < periodosFaltantes; p++) {
+                final numeroPeriodo = periodoInicial + p;
+                final precio = precioBase; // Precio simple, sin crecimiento compuesto a menos que se especifique
+                final demanda = demandaBase;
+                proveedor.actualizarIngreso(IngresoPeriodo(
+                  periodo: numeroPeriodo,
+                  precio: precio.toDouble(),
+                  demanda: demanda.toDouble(),
+                ));
+              }
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Se agregaron $periodosFaltantes periodos'), backgroundColor: Colors.green),
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: Colors.teal),
+            child: const Text('Agregar periodos'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmarLimpiar(ProveedorSimulador proveedor) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -468,7 +534,7 @@ class _IngresoRowState extends State<_IngresoRow> {
                     onFieldSubmitted: (_) => _guardar(),
                   )
                 : Text(
-                    tieneDatos ? '\$${_formatCurrency(widget.precioInicial!)}' : '—',
+                    tieneDatos ? '\$${_formatCurrency(widget.precioInicial ?? 0)}' : '—',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: tieneDatos ? Colors.black87 : Colors.grey.shade400),
                   ),
@@ -486,7 +552,7 @@ class _IngresoRowState extends State<_IngresoRow> {
                     onFieldSubmitted: (_) => _guardar(),
                   )
                 : Text(
-                    tieneDatos ? _formatNumber(widget.demandaInicial!) : '—',
+                    tieneDatos ? _formatNumber(widget.demandaInicial ?? 0) : '—',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: tieneDatos ? Colors.black87 : Colors.grey.shade400),
                   ),
@@ -536,6 +602,7 @@ class _IngresoRowState extends State<_IngresoRow> {
                     ],
                   )
                 : Row(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (tieneDatos)

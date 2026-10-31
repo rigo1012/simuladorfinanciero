@@ -19,6 +19,17 @@ class EstructuraCapital {
     required this.inversionRequerida,
   });
 
+  /// Convertir un mapa a EstructuraCapital (para persistencia)
+  factory EstructuraCapital.fromMap(Map<String, dynamic> map) {
+    return EstructuraCapital(
+      pctPropio: map['pct_propio'] as double,
+      pctDeuda: map['pct_deuda'] as double,
+      tasaInteresAnual: map['tasa_interes_anual'] as double?,
+      plazoMeses: map['plazo_meses'] as int?,
+      inversionRequerida: map['inversion_requerida'] as double,
+    );
+  }
+
   /// Monto del préstamo
   double get montoPrestamo => inversionRequerida * (pctDeuda / 100);
 
@@ -31,9 +42,9 @@ class EstructuraCapital {
   /// Cuota mensual fija (Sistema Francés)
   /// Cuota = P * [i(1+i)^n] / [(1+i)^n - 1]
   double get cuotaMensual {
-    if (montoPrestamo <= 0 || tasaMensual <= 0 || (plazoMeses ?? 0) <= 0) return 0;
+    final n = plazoMeses;
+    if (montoPrestamo <= 0 || tasaMensual <= 0 || n == null || n <= 0) return 0;
     final i = tasaMensual;
-    final n = plazoMeses!;
     final factor = math.pow(1 + i, n);
     return montoPrestamo * (i * factor) / (factor - 1);
   }
@@ -43,13 +54,13 @@ class EstructuraCapital {
 
   /// Genera tabla de amortización completa (mensual)
   List<AmortizacionMensual> generarTablaAmortizacion() {
-    if (montoPrestamo <= 0 || tasaMensual <= 0 || (plazoMeses ?? 0) <= 0) return [];
+    final n = plazoMeses;
+    if (montoPrestamo <= 0 || tasaMensual <= 0 || n == null || n <= 0) return [];
     
     final List<AmortizacionMensual> tabla = [];
     double saldo = montoPrestamo;
     final cuota = cuotaMensual;
     final i = tasaMensual;
-    final n = plazoMeses!;
 
     for (int mes = 1; mes <= n; mes++) {
       final interes = saldo * i;

@@ -19,6 +19,7 @@ class ReportePDF {
     final eval = evaluacion;
     final motor = eval.motorFEN;
     final flujos = motor.flujos;
+    final estructura = motor.estructura;
 
     // Colores
     final colorPrimary = PdfColors.blue800;
@@ -43,8 +44,8 @@ class ReportePDF {
           pw.SizedBox(height: 16),
           
           // 4. Estructura de Capital
-          if (motor.estructura != null) ...[
-            _buildEstructuraCapital(motor.estructura!, motor, colorPrimary),
+          if (estructura != null) ...[
+            _buildEstructuraCapital(estructura, motor, colorPrimary),
             pw.SizedBox(height: 16),
           ],
           
@@ -57,7 +58,7 @@ class ReportePDF {
           pw.SizedBox(height: 16),
           
           // 7. Amortización (si hay deuda)
-          if (motor.estructura != null && motor.estructura!.tieneDeuda) ...[
+          if (estructura != null && estructura.tieneDeuda) ...[
             _buildTablaAmortizacion(motor, colorPrimary),
             pw.SizedBox(height: 16),
           ],
@@ -163,7 +164,7 @@ class ReportePDF {
               ),
               pw.SizedBox(width: 12),
               pw.Expanded(
-                child: _buildKPICard('TIR', eval.tir != null ? '${eval.tir!.toStringAsFixed(2)}%' : 'N/A', primary),
+                child: _buildKPICard('TIR', eval.tir != null ? '${eval.tir?.toStringAsFixed(2)}%' : 'N/A', primary),
               ),
             ],
           ),
@@ -257,8 +258,8 @@ class ReportePDF {
       [
         _buildInfoRow('VPN (con financiamiento)', _formatCurrency(eval.vpn), valueColor: eval.vpn >= 0 ? PdfColors.green800 : PdfColors.red800),
         _buildInfoRow('VPN Operativo (sin financiamiento)', _formatCurrency(eval.vpnOperativo), valueColor: eval.vpnOperativo >= 0 ? PdfColors.green800 : PdfColors.red800),
-        _buildInfoRow('TIR (con financiamiento)', eval.tir != null ? '${eval.tir!.toStringAsFixed(2)}%' : 'No calculable'),
-        _buildInfoRow('TIR Operativa', eval.tirOperativa != null ? '${eval.tirOperativa!.toStringAsFixed(2)}%' : 'No calculable'),
+        _buildInfoRow('TIR (con financiamiento)', eval.tir != null ? '${eval.tir?.toStringAsFixed(2)}%' : 'No calculable'),
+        _buildInfoRow('TIR Operativa', eval.tirOperativa != null ? '${eval.tirOperativa?.toStringAsFixed(2)}%' : 'No calculable'),
         _buildInfoRow('Payback Simple', eval.paybackPeriodos != null ? '${eval.paybackPeriodos} periodos' : 'No recupera'),
         _buildInfoRow('Payback Descontado', eval.paybackDescontado != null ? '${eval.paybackDescontado} periodos' : 'No recupera'),
         _buildInfoRow('Beneficio / Costo (B/C)', eval.beneficioCosto.toStringAsFixed(2)),
@@ -329,7 +330,8 @@ class ReportePDF {
   }
 
   static pw.Widget _buildTablaAmortizacion(ResultadoMotorFEN motor, PdfColor primary) {
-    final estructura = motor.estructura!;
+    final estructura = motor.estructura;
+    if (estructura == null) return pw.SizedBox();
     final mesesPorPeriodo = motor.config.mesesPorPeriodo;
     final resumen = estructura.resumenPorPeriodos(mesesPorPeriodo, motor.horizontePeriodos);
     

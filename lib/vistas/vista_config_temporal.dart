@@ -420,7 +420,7 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
   }
 
   void _guardar(ProveedorSimulador proveedor) {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState?.validate() != true) return;
 
     final config = ConfiguracionTemporal(
       mesesPorPeriodo: int.parse(_mesesCtrl.text),

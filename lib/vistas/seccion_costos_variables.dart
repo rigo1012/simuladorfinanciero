@@ -46,23 +46,9 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
   Widget build(BuildContext context) {
     return Consumer<ProveedorSimulador>(
       builder: (context, proveedor, _) {
-        // Validar prerrequisitos
-        if (!proveedor.estaConfigurado) {
-          return _buildPrerequisitoFaltante('Configuración Temporal (Paso 0)');
-        }
-        if (proveedor.inversionRequerida.activos.isEmpty) {
-          return _buildPrerequisitoFaltante('Activos e Inversión (Paso 1)');
-        }
-        if (proveedor.estructuraCapital == null) {
-          return _buildPrerequisitoFaltante('Estructura de Financiamiento (Paso 2)');
-        }
-        if (!proveedor.ingresosCompletos) {
-          return _buildPrerequisitoFaltante('Ingresos Estimados (Paso 3)');
-        }
-
         final config = proveedor.configTemporal;
-        final totalPeriodos = config.totalPeriodos;
-        final mesesPorPeriodo = config.mesesPorPeriodo;
+        final totalPeriodos = config?.totalPeriodos ?? 0;
+        final mesesPorPeriodo = config?.mesesPorPeriodo ?? 0;
         
         // Obtener costos variables existentes
         final costosExistentes = proveedor.costosVariables;
@@ -95,28 +81,6 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
           ],
         );
       },
-    );
-  }
-
-  Widget _buildPrerequisitoFaltante(String paso) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          Icon(Icons.hourglass_empty, size: 64, color: Colors.orange.shade300),
-          const SizedBox(height: 16),
-          Text(
-            'Paso previo requerido',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Complete primero: $paso',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
-          ),
-        ],
-      ),
     );
   }
 
@@ -206,9 +170,9 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
             Wrap(
               spacing: 8,
               runSpacing: 4,
-              children: List.generate(proveedor.configTemporal.totalPeriodos, (i) {
+              children: List.generate(proveedor.configTemporal?.totalPeriodos ?? 0, (i) {
                 final periodo = i + 1;
-                final factor = periodo <= 1 ? 1.0 : math.pow(1 + inflacionActual / 100, (proveedor.configTemporal.mesesPorPeriodo / 12) * (periodo - 1));
+                final factor = periodo <= 1 ? 1.0 : math.pow(1 + inflacionActual / 100, ((proveedor.configTemporal?.mesesPorPeriodo ?? 0) / 12) * (periodo - 1));
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -492,7 +456,7 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           FilledButton(
             onPressed: () {
-              if (!formKey.currentState!.validate()) return;
+              if (formKey.currentState?.validate() != true) return;
               final nuevo = ItemCostoVariable(
                 id: 'cv_${DateTime.now().millisecondsSinceEpoch}_${math.Random().nextInt(1000)}',
                 tipo: tipo,
@@ -501,7 +465,7 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
                 costoUnitario: tipo != TipoCostoVariable.manoObra ? double.parse(costoCtrl.text) : 0,
                 costoPorOperacion: tipo == TipoCostoVariable.manoObra ? double.parse(costoCtrl.text) : 0,
               );
-              proveedor.agregarItemCostoVariable(periodo, nuevo, proveedor.configTemporal.mesesPorPeriodo, double.tryParse(_inflacionCtrl.text) ?? 0.0);
+              proveedor.agregarItemCostoVariable(periodo, nuevo, proveedor.configTemporal?.mesesPorPeriodo ?? 1, double.tryParse(_inflacionCtrl.text) ?? 0.0);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('$titulo agregado al Periodo $periodo'), backgroundColor: Colors.green),

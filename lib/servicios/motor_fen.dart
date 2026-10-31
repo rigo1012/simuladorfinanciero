@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/configuracion_temporal.dart';
 import '../modelos/estructura_capital.dart';
@@ -129,7 +128,21 @@ class MotorFEN {
     required int horizonteAnios,        // Horizonte de evaluación en años
     double valorResidualPct = 0.1,      // 10% por defecto
   }) {
-    final config = proveedor.configTemporal!;
+    final config = proveedor.configTemporal;
+    if (config == null) {
+      // Return empty result if not configured
+      return ResultadoMotorFEN(
+        flujos: [],
+        config: ConfiguracionTemporal(mesesPorPeriodo: 1, anosProyeccion: 0, cosechasPorAnio: 1),
+        estructura: null,
+        inversionRequerida: 0,
+        aportePropio: 0,
+        montoPrestamo: 0,
+        valorResidualPct: 0,
+        trema: 0,
+        horizontePeriodos: 0,
+      );
+    }
     final estructura = proveedor.estructuraCapital;
     final inversionRequerida = proveedor.inversionRequerida.total;
     final aportePropio = proveedor.aportePropio;
@@ -139,13 +152,13 @@ class MotorFEN {
     final totalPeriodosConfig = config.totalPeriodos;
     
     // Determinar horizonte en periodos (mínimo entre horizonte solicitado y config)
-    final horizontePeriodos = (horizonteAnios * 12 / mesesPorPeriodo).floor().clamp(1, totalPeriodosConfig);
+    final maxPeriodos = totalPeriodosConfig > 0 ? totalPeriodosConfig : 1;
+    final horizontePeriodos = (horizonteAnios * 12 / mesesPorPeriodo).floor().clamp(1, maxPeriodos);
     
     // Obtener arrays de datos por periodo (1..N)
     final ingresos = proveedor.ingresosPorPeriodo;
     final costosVariables = proveedor.costosVariablesPorPeriodo;
     final inflacionGlobalFijos = proveedor.inflacionGlobalFijos;
-    final costosFijos = proveedor.costosFijosPorPeriodo(inflacionGlobalFijos);
 
     // Valor residual = % de inversión requerida en el último periodo del horizonte
     final valorResidualMonto = inversionRequerida * valorResidualPct;
@@ -191,7 +204,10 @@ class MotorFEN {
         amortizacionCapital = proveedor.amortizacionCapitalEnPeriodo(p, mesesPorPeriodo).toDouble();
         
         // Liquidación de saldo insoluto en el último periodo productivo
-        final plazoCreditoPeriodos = (estructura.plazoMeses! / mesesPorPeriodo).ceil();
+        final plazoMesesCredito = estructura.plazoMeses ?? 0;
+        final plazoCreditoPeriodos = mesesPorPeriodo > 0
+            ? (plazoMesesCredito / mesesPorPeriodo).ceil()
+            : 0;
         if (p == horizontePeriodos && horizontePeriodos < plazoCreditoPeriodos) {
           liquidacionSaldo = proveedor.saldoInsolutoEnPeriodo(p, mesesPorPeriodo).toDouble();
         }

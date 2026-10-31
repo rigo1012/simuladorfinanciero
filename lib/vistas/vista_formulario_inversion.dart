@@ -42,7 +42,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
     }
 
     // El validador bloquea la ejecución si algún campo falla
-    if (!_llaveFormulario.currentState!.validate()) return;
+    if (_llaveFormulario.currentState?.validate() != true) return;
 
     final tasa = double.parse(_tasaCtrl.text);
     final anios = int.parse(_aniosCtrl.text);
@@ -63,7 +63,6 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   Widget build(BuildContext context) {
     return Consumer<ProveedorSimulador>(
       builder: (context, proveedor, _) {
-        final estaConfigurado = proveedor.estaConfigurado;
         final tieneFinanciamiento = proveedor.estructuraCapital != null;
 
         return Padding(
@@ -193,7 +192,37 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   }
 
   Widget _buildFinanciamientoSummary(ProveedorSimulador proveedor) {
-    final fin = proveedor.estructuraCapital!;
+    final fin = proveedor.estructuraCapital;
+    if (fin == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                const SizedBox(width: 8),
+                Text(
+                  'Financiamiento no configurado',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Complete la Estructura de Financiamiento para ver el resumen.',
+              style: TextStyle(fontSize: 13, color: Colors.orange.shade700),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -291,10 +320,10 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
             spacing: 16,
             runSpacing: 8,
             children: [
-              _ConfigChip(label: 'Periodo', value: '${config.mesesPorPeriodo} meses', icon: Icons.calendar_month),
-              _ConfigChip(label: 'Proyección', value: '${config.anosProyeccion} años', icon: Icons.date_range),
-              _ConfigChip(label: 'Ciclos/año', value: '${config.cosechasPorAnio}', icon: Icons.agriculture),
-              _ConfigChip(label: 'Total Periodos', value: '${config.totalPeriodos}', icon: Icons.format_list_numbered, highlight: true),
+              _ConfigChip(label: 'Periodo', value: '${config?.mesesPorPeriodo ?? 0} meses', icon: Icons.calendar_month),
+              _ConfigChip(label: 'Proyección', value: '${config?.anosProyeccion ?? 0} años', icon: Icons.date_range),
+              _ConfigChip(label: 'Ciclos/año', value: '${config?.cosechasPorAnio ?? 0}', icon: Icons.agriculture),
+              _ConfigChip(label: 'Total Periodos', value: '${config?.totalPeriodos ?? 0}', icon: Icons.format_list_numbered, highlight: true),
             ],
           ),
         ],

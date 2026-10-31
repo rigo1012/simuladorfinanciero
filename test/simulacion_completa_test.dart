@@ -39,7 +39,7 @@ void main() {
       
       proveedor.configurarTemporal(config);
       expect(proveedor.estaConfigurado, isTrue);
-      expect(proveedor.configTemporal.totalPeriodos, equals(20));
+      expect(proveedor.configTemporal?.totalPeriodos, equals(20));
 
       // ========== PASO 1: ACTIVOS (Inversión Requerida) ==========
       final random = math.Random(42); // Seed fijo para reproducibilidad

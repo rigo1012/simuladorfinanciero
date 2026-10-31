@@ -18,6 +18,7 @@ class ProveedorSimulador extends ChangeNotifier {
 
   bool _cargando = false;
   bool _cargandoHistorial = false;
+  bool _puedeDescargarPDF = false;
   List<Map<String, dynamic>> _historial = [];
   String? _error;
   Map<String, dynamic>? _ultimoResultado;
@@ -69,7 +70,7 @@ class ProveedorSimulador extends ChangeNotifier {
 
   // --- CONFIGURACIÓN TEMPORAL (Fase 0) ---
   ConfiguracionTemporal? _configTemporal;
-  ConfiguracionTemporal get configTemporal => _configTemporal!;
+  ConfiguracionTemporal? get configTemporal => _configTemporal;
   bool get estaConfigurado => _configTemporal != null;
 
   /// Configura la base temporal del proyecto.
@@ -135,10 +136,11 @@ class ProveedorSimulador extends ChangeNotifier {
 
   /// Cuotas totales en un periodo (para Flujo de Caja)
   double cuotasEnPeriodo(int periodo, int mesesPorPeriodo) {
-    if (!tieneDeuda) return 0;
+    final estructura = _estructuraCapital;
+    if (estructura == null || !estructura.tieneDeuda) return 0;
     final mesInicio = (periodo - 1) * mesesPorPeriodo + 1;
     final mesFin = periodo * mesesPorPeriodo;
-    final tabla = _estructuraCapital!.generarTablaAmortizacion();
+    final tabla = estructura.generarTablaAmortizacion();
     if (mesInicio > tabla.length) return 0;
     final fin = mesFin.clamp(0, tabla.length);
     return tabla.sublist(mesInicio - 1, fin).fold(0.0, (s, a) => s + a.cuota);
@@ -146,10 +148,11 @@ class ProveedorSimulador extends ChangeNotifier {
 
   /// Intereses en un periodo (para P&G / Estado de Resultados)
   double interesesEnPeriodo(int periodo, int mesesPorPeriodo) {
-    if (!tieneDeuda) return 0;
+    final estructura = _estructuraCapital;
+    if (estructura == null || !estructura.tieneDeuda) return 0;
     final mesInicio = (periodo - 1) * mesesPorPeriodo + 1;
     final mesFin = periodo * mesesPorPeriodo;
-    final tabla = _estructuraCapital!.generarTablaAmortizacion();
+    final tabla = estructura.generarTablaAmortizacion();
     if (mesInicio > tabla.length) return 0;
     final fin = mesFin.clamp(0, tabla.length);
     return tabla.sublist(mesInicio - 1, fin).fold(0.0, (s, a) => s + a.interes);
@@ -157,10 +160,11 @@ class ProveedorSimulador extends ChangeNotifier {
 
   /// Amortización de capital en un periodo (para Flujo de Caja)
   double amortizacionCapitalEnPeriodo(int periodo, int mesesPorPeriodo) {
-    if (!tieneDeuda) return 0;
+    final estructura = _estructuraCapital;
+    if (estructura == null || !estructura.tieneDeuda) return 0;
     final mesInicio = (periodo - 1) * mesesPorPeriodo + 1;
     final mesFin = periodo * mesesPorPeriodo;
-    final tabla = _estructuraCapital!.generarTablaAmortizacion();
+    final tabla = estructura.generarTablaAmortizacion();
     if (mesInicio > tabla.length) return 0;
     final fin = mesFin.clamp(0, tabla.length);
     return tabla.sublist(mesInicio - 1, fin).fold(0.0, (s, a) => s + a.capital);
@@ -168,8 +172,9 @@ class ProveedorSimulador extends ChangeNotifier {
 
   /// Saldo insoluto al final de un periodo (para liquidación final)
   double saldoInsolutoEnPeriodo(int periodo, int mesesPorPeriodo) {
-    if (!tieneDeuda) return 0;
-    return _estructuraCapital!.saldoInsolutoEnPeriodo(periodo, mesesPorPeriodo);
+    final estructura = _estructuraCapital;
+    if (estructura == null || !estructura.tieneDeuda) return 0;
+    return estructura.saldoInsolutoEnPeriodo(periodo, mesesPorPeriodo);
   }
 
   // --- INGRESOS ESTIMADOS (CRUD) ---
@@ -209,14 +214,14 @@ class ProveedorSimulador extends ChangeNotifier {
   /// Verifica si todos los periodos tienen ingresos definidos.
   bool get ingresosCompletos {
     if (!estaConfigurado) return false;
-    final total = configTemporal.totalPeriodos;
+    final total = configTemporal?.totalPeriodos ?? 0;
     return _ingresos.length == total && _ingresos.every((i) => i.precio > 0 && i.demanda > 0);
   }
 
   /// Verifica si todos los periodos tienen al menos un costo variable definido.
   bool get costosVariablesCompletos {
     if (!estaConfigurado) return false;
-    final total = configTemporal.totalPeriodos;
+    final total = configTemporal?.totalPeriodos ?? 0;
     // Consideramos "completo" si hay al menos un item en cada periodo
     // Opcionalmente se podría requerir items en las 3 categorías
     return _costosVariables.length >= total && 
@@ -226,7 +231,7 @@ class ProveedorSimulador extends ChangeNotifier {
   /// Verifica si todos los periodos tienen al menos un costo fijo definido.
   bool get costosFijosCompletos {
     if (!estaConfigurado) return false;
-    final total = configTemporal.totalPeriodos;
+    final total = configTemporal?.totalPeriodos ?? 0;
     return _costosFijos.length >= total && 
            _costosFijos.every((c) => c.items.isNotEmpty);
   }
@@ -240,7 +245,7 @@ class ProveedorSimulador extends ChangeNotifier {
   /// Getter para Motor FEN: lista de ingresos ordenada por periodo (rellena con 0 si faltan).
   List<double> get ingresosPorPeriodo {
     if (!estaConfigurado) return [];
-    final total = configTemporal.totalPeriodos;
+    final total = configTemporal?.totalPeriodos ?? 0;
     return List.generate(total, (i) => ingresoEnPeriodo(i + 1));
   }
 
@@ -318,7 +323,7 @@ class ProveedorSimulador extends ChangeNotifier {
   /// Getter para Motor FEN: lista de costos variables por periodo (con inflación).
   List<double> get costosVariablesPorPeriodo {
     if (!estaConfigurado) return [];
-    final total = configTemporal.totalPeriodos;
+    final total = configTemporal?.totalPeriodos ?? 0;
     return List.generate(total, (i) => costoVariableEnPeriodo(i + 1));
   }
 
@@ -405,7 +410,7 @@ class ProveedorSimulador extends ChangeNotifier {
   /// Getter para Motor FEN: lista de costos fijos por periodo.
   List<double> costosFijosPorPeriodo(double inflacionGlobal) {
     if (!estaConfigurado) return [];
-    final total = configTemporal!.totalPeriodos;
+    final total = configTemporal?.totalPeriodos ?? 0;
     return List.generate(total, (i) => costoFijoEnPeriodo(i + 1, inflacionGlobal));
   }
 
@@ -425,6 +430,7 @@ class ProveedorSimulador extends ChangeNotifier {
   List<Map<String, dynamic>> get historialInversiones => List.unmodifiable(_historial);
   String? get error => _error;
   Map<String, dynamic>? get ultimoResultado => _ultimoResultado;
+  bool get puedeDescargarPDF => _puedeDescargarPDF;
 
   /// Calcula el VAN (Valor Actual Neto) dado una serie de flujos de caja.
   static double _calcularVAN(List<double> flujos, double tasa) {
@@ -687,6 +693,7 @@ class ProveedorSimulador extends ChangeNotifier {
 
       // 4. Preparar resultado COMPLETO para Vista Resultados y PDF
       _ultimoResultado = evaluacion.toMap();
+      _puedeDescargarPDF = _ultimoResultado != null;
       
       // 5. Recargar historial
       await cargarHistorial();

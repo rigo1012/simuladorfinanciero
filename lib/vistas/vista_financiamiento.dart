@@ -57,17 +57,8 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
     return Consumer<ProveedorSimulador>(
       builder: (context, proveedor, _) {
         final inversion = proveedor.inversionRequerida.total;
-        final tieneActivos = proveedor.inversionRequerida.activos.isNotEmpty;
         final config = proveedor.estaConfigurado ? proveedor.configTemporal : null;
         final financiamientoActual = proveedor.estructuraCapital;
-
-        // Si no hay configuración temporal ni activos, mostrar aviso
-        if (!proveedor.estaConfigurado) {
-          return _buildPrerequisitoFaltante('Configuración Temporal (Paso 0)');
-        }
-        if (!tieneActivos) {
-          return _buildPrerequisitoFaltante('Al menos un Activo (Paso 1 - Activos)');
-        }
 
         // Valores por defecto o actuales
         if (_pctPropioCtrl.text.isEmpty && financiamientoActual == null) {
@@ -104,6 +95,8 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
           child: Form(
             key: _formKey,
             child: ListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
                 // Header
                 _buildHeader(inversion),
@@ -209,28 +202,6 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildPrerequisitoFaltante(String prerequisito) {
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          Icon(Icons.block, size: 64, color: Colors.orange.shade300),
-          const SizedBox(height: 16),
-          Text(
-            'Prerrequisito pendiente',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Complete primero: $prerequisito',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
-          ),
-        ],
-      ),
     );
   }
 
@@ -641,7 +612,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
   }
 
   void _guardar(ProveedorSimulador proveedor, bool tieneDeuda, double tasa, int plazo) {
-    if (!_formKey.currentState!.validate()) return;
+    if (_formKey.currentState?.validate() != true) return;
 
     final pctPropio = double.parse(_pctPropioCtrl.text);
     final pctDeuda = double.parse(_pctDeudaCtrl.text);

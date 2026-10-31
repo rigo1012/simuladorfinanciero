@@ -245,7 +245,7 @@ class _SeccionActivosState extends State<SeccionActivos> {
           ),
           FilledButton(
             onPressed: () {
-              if (!formKey.currentState!.validate()) return;
+              if (formKey.currentState?.validate() != true) return;
               final nuevo = Activo(
                 id: 'act_${DateTime.now().millisecondsSinceEpoch}_$_nextId',
                 nombre: nombreCtrl.text.trim(),
@@ -319,7 +319,7 @@ class _ActivoCardState extends State<_ActivoCard> {
   }
 
   void _guardar() {
-    if (!_formKey.currentState!.validate()) {
+    if (_formKey.currentState?.validate() != true) {
       setState(() => _editando = true);
       return;
     }

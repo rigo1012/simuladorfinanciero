@@ -108,7 +108,7 @@ class VistaResultados extends StatelessWidget {
                 foregroundColor: Colors.red.shade700,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              onPressed: () => _exportarPDF(proveedor),
+              onPressed: proveedor.puedeDescargarPDF ? () => _exportarPDF(proveedor) : null,
             ),
             const SizedBox(width: 12),
             FilledButton.icon(
@@ -319,12 +319,14 @@ class VistaResultados extends StatelessWidget {
   }
 
   Future<void> _exportarPDF(ProveedorSimulador proveedor) async {
+    final ctx = proveedor.context;
+    if (ctx == null) return;
     try {
       // Mostrar loading
       showDialog(
-        context: proveedor.context!,
+        context: ctx,
         barrierDismissible: false,
-        builder: (ctx) => const Center(child: CircularProgressIndicator()),
+        builder: (dialogCtx) => const Center(child: CircularProgressIndicator()),
       );
       
       // Generar PDF usando el servicio
@@ -334,14 +336,14 @@ class VistaResultados extends StatelessWidget {
         nombreUsuario: 'Usuario',
       );
       
-      Navigator.pop(proveedor.context!);
+      Navigator.pop(ctx);
       
-      ScaffoldMessenger.of(proveedor.context!).showSnackBar(
+      ScaffoldMessenger.of(ctx).showSnackBar(
         const SnackBar(content: Text('PDF generado y compartido exitosamente'), backgroundColor: Colors.green),
       );
     } catch (e) {
-      Navigator.pop(proveedor.context!);
-      ScaffoldMessenger.of(proveedor.context!).showSnackBar(
+      Navigator.pop(ctx);
+      ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(content: Text('Error generando PDF: $e'), backgroundColor: Colors.red),
       );
     }
