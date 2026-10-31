@@ -20,6 +20,9 @@ class SeccionIngresos extends StatefulWidget {
 }
 
 class _SeccionIngresosState extends State<SeccionIngresos> {
+  /// Cantidad de periodos que se dibujan actualmente (paginación visual).
+  int _periodosVisibles = 1;
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ProveedorSimulador>(
@@ -91,9 +94,11 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
     // Crear mapa para acceso rápido
     final mapaIngresos = {for (var i in ingresos) i.periodo: i};
 
-    // Determinar cuántos periodos mostrar inicialmente (máx 5) y cuántos faltan
-    int periodosAMostrar = totalPeriodos > 5 ? 5 : totalPeriodos;
-    int periodosFaltantes = totalPeriodos - periodosAMostrar;
+    // Paginación visual: solo se dibujan los periodos ya revelados
+    final periodosVisibles = totalPeriodos == 0
+        ? 0
+        : _periodosVisibles.clamp(1, totalPeriodos);
+    final puedeAgregar = periodosVisibles < totalPeriodos;
 
     return Column(
       children: [
@@ -114,20 +119,17 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
             ],
           ),
         ),
-        // Filas - solo mostramos los periodos iniciales y un botón para agregar más
-        _buildPeriodosRows(proveedor, periodosAMostrar, mapaIngresos, periodosFaltantes, totalPeriodos),
-        // Botón para agregar más periodos si faltan
-        if (periodosFaltantes > 0) ...[
+        // Filas visibles
+        _buildPeriodosRows(proveedor, periodosVisibles, mapaIngresos),
+        // Botón para revelar el siguiente periodo
+        if (puedeAgregar) ...[
           const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () => _showAddMorePeriodsDialog(proveedor, periodosFaltantes),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add_circle_outline, size: 16, color: Colors.teal.shade700),
-                const SizedBox(width: 4),
-                Text('Agregar los siguientes $periodosFaltantes periodos', style: TextStyle(fontSize: 12, color: Colors.teal.shade700)),
-              ],
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _periodosVisibles++),
+            icon: Icon(Icons.add_circle_outline, size: 18, color: Colors.teal.shade700),
+            label: Text(
+              'Agregar Periodo ${periodosVisibles + 1}',
+              style: TextStyle(color: Colors.teal.shade700),
             ),
           ),
         ] else ...[
@@ -142,7 +144,7 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
     );
   }
 
-  Widget _buildPeriodosRows(ProveedorSimulador proveedor, int count, Map<int, IngresoPeriodo> mapaIngresos, int periodosFaltantes, int totalPeriodos) {
+  Widget _buildPeriodosRows(ProveedorSimulador proveedor, int count, Map<int, IngresoPeriodo> mapaIngresos) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -319,80 +321,6 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.teal),
             child: const Text('Generar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showAddMorePeriodsDialog(ProveedorSimulador proveedor, int periodosFaltantes) async {
-    final periodoCtrl = TextEditingController(text: '1');
-    final precioCtrl = TextEditingController();
-    final demandaCtrl = TextEditingController();
-
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Agregar $periodosFaltantes periodos más'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Se agregarán $periodosFaltantes periodos adicionales al final.',
-                style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: periodoCtrl,
-                decoration: const InputDecoration(labelText: 'Periodo inicial (default: 1)', border: OutlineInputBorder()),
-                keyboardType: TextInputType.number,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: precioCtrl,
-                decoration: const InputDecoration(labelText: 'Precio unitario base', prefixText: '\$ ', border: OutlineInputBorder()),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: demandaCtrl,
-                decoration: const InputDecoration(labelText: 'Demanda base', border: OutlineInputBorder()),
-                keyboardType: TextInputType.number,
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              final periodoInicial = int.tryParse(periodoCtrl.text) ?? 1;
-              final precioBase = double.tryParse(precioCtrl.text) ?? 0;
-              final demandaBase = double.tryParse(demandaCtrl.text) ?? 0;
-
-              if (precioBase <= 0 || demandaBase <= 0) return;
-
-              for (int p = 0; p < periodosFaltantes; p++) {
-                final numeroPeriodo = periodoInicial + p;
-                final precio = precioBase; // Precio simple, sin crecimiento compuesto a menos que se especifique
-                final demanda = demandaBase;
-                proveedor.actualizarIngreso(IngresoPeriodo(
-                  periodo: numeroPeriodo,
-                  precio: precio.toDouble(),
-                  demanda: demanda.toDouble(),
-                ));
-              }
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Se agregaron $periodosFaltantes periodos'), backgroundColor: Colors.green),
-              );
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.teal),
-            child: const Text('Agregar periodos'),
           ),
         ],
       ),

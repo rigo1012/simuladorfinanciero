@@ -28,6 +28,9 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
   final _inflacionCtrl = TextEditingController(text: '5.0');
   final _inflacionFocus = FocusNode();
 
+  /// Cantidad de periodos que se dibujan actualmente (paginación visual).
+  int _periodosVisibles = 1;
+
   @override
   void initState() {
     super.initState();
@@ -260,15 +263,35 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
     String labelCosto,
     IconData icon,
   ) {
+    final periodosVisibles = totalPeriodos == 0
+        ? 0
+        : _periodosVisibles.clamp(1, totalPeriodos);
+    final puedeAgregar = periodosVisibles < totalPeriodos;
+
     return ListView(
       children: [
-        // Para cada periodo, mostrar items de esta categoría
-        for (int p = 1; p <= totalPeriodos; p++) ...[
+        // Para cada periodo visible, mostrar items de esta categoría
+        for (int p = 1; p <= periodosVisibles; p++) ...[
           _buildPeriodoCategoriaCard(
             proveedor, p, totalPeriodos, mesesPorPeriodo, inflacion, mapaCostos,
             tipo, titulo, labelNombre, labelCantidad, labelCosto, icon,
           ),
         ],
+        // Botón para revelar el siguiente periodo
+        if (puedeAgregar)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: OutlinedButton.icon(
+                onPressed: () => setState(() => _periodosVisibles++),
+                icon: Icon(Icons.add_circle_outline, size: 18, color: Colors.deepOrange.shade700),
+                label: Text(
+                  'Agregar Periodo ${periodosVisibles + 1}',
+                  style: TextStyle(color: Colors.deepOrange.shade700),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

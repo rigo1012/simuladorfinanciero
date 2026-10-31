@@ -20,6 +20,9 @@ class SeccionCostosFijos extends StatefulWidget {
 class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
   final _inflacionGlobalCtrl = TextEditingController(text: '5.0');
 
+  /// Cantidad de periodos que se dibujan actualmente (paginación visual).
+  int _periodosVisibles = 1;
+
   @override
   void initState() {
     super.initState();
@@ -182,12 +185,19 @@ class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
   }
 
   Widget _buildPeriodosList(ProveedorSimulador proveedor, int totalPeriodos, int mesesPorPeriodo, double inflacion, Map<int, CostoFijoPeriodo> mapaCostos) {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: totalPeriodos,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
+    final periodosVisibles = totalPeriodos == 0
+        ? 0
+        : _periodosVisibles.clamp(1, totalPeriodos);
+    final puedeAgregar = periodosVisibles < totalPeriodos;
+
+    return Column(
+      children: [
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: periodosVisibles,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
         final periodo = index + 1;
         final costoPeriodo = mapaCostos[periodo];
         final items = costoPeriodo?.items ?? [];
@@ -253,7 +263,21 @@ class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
             ],
           ),
         );
-      },
+          },
+        ),
+        // Botón para revelar el siguiente periodo
+        if (puedeAgregar) ...[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _periodosVisibles++),
+            icon: Icon(Icons.add_circle_outline, size: 18, color: Colors.indigo.shade700),
+            label: Text(
+              'Agregar Periodo ${periodosVisibles + 1}',
+              style: TextStyle(color: Colors.indigo.shade700),
+            ),
+          ),
+        ],
+      ],
     );
   }
 

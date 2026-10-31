@@ -366,6 +366,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
   }
 
   Widget _buildDeudaDetails(double tasa, int plazo, double inversion, EstructuraCapital? preview) {
+    final tieneDeuda = (double.tryParse(_pctDeudaCtrl.text) ?? 0) > 0;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -395,6 +396,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                 validator: (v) {
+                  if (!tieneDeuda) return null;
                   if (v == null || v.isEmpty) return 'Requerido si hay deuda';
                   final n = double.tryParse(v);
                   if (n == null || n <= 0 || n > 100) return '0.01-100%';
@@ -419,6 +421,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (v) {
+                  if (!tieneDeuda) return null;
                   if (v == null || v.isEmpty) return 'Requerido si hay deuda';
                   final n = int.tryParse(v);
                   if (n == null || n <= 0 || n > 360) return '1-360 meses';
