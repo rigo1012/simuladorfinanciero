@@ -395,6 +395,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                onChanged: (_) => setState(() {}),
                 validator: (v) {
                   if (!tieneDeuda) return null;
                   if (v == null || v.isEmpty) return 'Requerido si hay deuda';
@@ -420,6 +421,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
                 ),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (_) => setState(() {}),
                 validator: (v) {
                   if (!tieneDeuda) return null;
                   if (v == null || v.isEmpty) return 'Requerido si hay deuda';
@@ -468,8 +470,8 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
           const SizedBox(height: 12),
           _PreviewRow(label: 'Monto Préstamo', value: _formatCurrency(estructura.montoPrestamo), highlight: true),
           _PreviewRow(label: 'Aporte Capital Propio', value: _formatCurrency(estructura.aportePropio)),
-          _PreviewRow(label: 'Tasa Anual', value: '${estructura.tasaInteresAnual?.toStringAsFixed(2)}%'),
-          _PreviewRow(label: 'Plazo', value: '${estructura.plazoMeses} meses'),
+          _PreviewRow(label: 'Tasa Anual', value: '${(estructura.tasaInteresAnual ?? 0.0).toStringAsFixed(2)}%'),
+          _PreviewRow(label: 'Plazo', value: '${estructura.plazoMeses ?? 0} meses'),
           _PreviewRow(label: 'Cuota Mensual', value: _formatCurrency(estructura.cuotaMensual), highlight: true),
           _PreviewRow(label: 'Cuota por Periodo (3m)', value: _formatCurrency(estructura.cuotaMensual * 3)),
           const Divider(height: 16),
