@@ -328,18 +328,35 @@ class VistaResultados extends StatelessWidget {
         barrierDismissible: false,
         builder: (dialogCtx) => const Center(child: CircularProgressIndicator()),
       );
-      
-      // Generar PDF usando el servicio
-      await ReportePDF.guardarEImprimir(
+
+      // Generar los bytes del PDF con el motor de reportes
+      final bytes = await ReportePDF.generar(
         evaluacion: _reconstruirEvaluacion(proveedor),
         nombreProyecto: 'Sistema de Riego',
         nombreUsuario: 'Usuario',
       );
-      
+
+      // Autoguardado de la copia estática local en Documentos
+      final ruta = await ReportePDF.guardarEnDocumentos(
+        bytes: bytes,
+        nombreProyecto: 'Sistema de Riego',
+      );
+
       Navigator.pop(ctx);
-      
+
+      // Notificación con la ruta absoluta del archivo guardado
       ScaffoldMessenger.of(ctx).showSnackBar(
-        const SnackBar(content: Text('PDF generado y compartido exitosamente'), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text('Archivo PDF guardado en: $ruta'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+
+      // Abrir diálogo de impresión/compartir
+      await ReportePDF.imprimir(
+        bytes: bytes,
+        nombreProyecto: 'Sistema de Riego',
       );
     } catch (e) {
       Navigator.pop(ctx);

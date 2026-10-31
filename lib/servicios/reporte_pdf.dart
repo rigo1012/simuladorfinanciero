@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
 import 'motor_fen.dart';
 import 'evaluador_financiero.dart';
 import '../modelos/estructura_capital.dart';
@@ -83,7 +85,37 @@ class ReportePDF {
       nombreProyecto: nombreProyecto,
       nombreUsuario: nombreUsuario,
     );
-    
+
+    // Autoguardado de la copia estática local
+    await guardarEnDocumentos(bytes: bytes, nombreProyecto: nombreProyecto);
+
+    await Printing.layoutPdf(
+      onLayout: (format) async => bytes,
+      name: 'Evaluacion_${nombreProyecto.replaceAll(' ', '_')}_${DateTime.now().toIso8601String().split('T')[0]}.pdf',
+    );
+  }
+
+  /// Guarda los bytes del PDF en la carpeta de Documentos del usuario
+  /// y devuelve la ruta absoluta del archivo creado.
+  static Future<String> guardarEnDocumentos({
+    required Uint8List bytes,
+    required String nombreProyecto,
+  }) async {
+    final directorio = await getApplicationDocumentsDirectory();
+    final fecha = DateTime.now().toIso8601String().split('T')[0];
+    final nombreSeguro = nombreProyecto.replaceAll(RegExp(r'[^\w\-]+'), '_');
+    final archivo = File(
+      '${directorio.path}${Platform.pathSeparator}Evaluacion_${nombreSeguro}_$fecha.pdf',
+    );
+    await archivo.writeAsBytes(bytes, flush: true);
+    return archivo.path;
+  }
+
+  /// Abre el diálogo de impresión/compartir con los bytes ya generados.
+  static Future<void> imprimir({
+    required Uint8List bytes,
+    required String nombreProyecto,
+  }) async {
     await Printing.layoutPdf(
       onLayout: (format) async => bytes,
       name: 'Evaluacion_${nombreProyecto.replaceAll(' ', '_')}_${DateTime.now().toIso8601String().split('T')[0]}.pdf',

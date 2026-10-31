@@ -49,6 +49,9 @@ dependencies:
   pdf: ^3.11.0
   printing: ^5.13.0
 
+  # Acceso a carpetas nativas (Documentos) para autoguardado del PDF
+  path_provider: ^2.1.5
+
 dependency_overrides:
   # Fix for ZLibDecoder issue with image 4.11.0
   image: 4.10.0
