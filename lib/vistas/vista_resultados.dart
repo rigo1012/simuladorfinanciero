@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
@@ -69,6 +70,11 @@ class VistaResultados extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _AutoguardadoPDF(
+            proveedor: proveedor,
+            evaluacion: _reconstruirEvaluacion(proveedor),
+            firma: '${data['vpn']}|${data['tir']}|${data['vpn_operativo']}|${data['beneficio_costo']}',
+          ),
           _buildHeader(proveedor, esViable, veredicto, vpn),
           const SizedBox(height: 24),
           _buildKPIsGrid(vpn, vpnOperativo, tir, tirOperativa, payback, paybackDesc, bc, bcOperativo, kpis),
@@ -99,6 +105,18 @@ class VistaResultados extends StatelessWidget {
         ),
         Row(
           children: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.folder_open, size: 20),
+              label: const Text('Documentos'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                side: BorderSide(color: Colors.blue.shade400, width: 2),
+                foregroundColor: Colors.blue.shade700,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () => _mostrarDocumentos(proveedor),
+            ),
+            const SizedBox(width: 12),
             OutlinedButton.icon(
               icon: const Icon(Icons.picture_as_pdf, size: 20),
               label: const Text('Exportar PDF'),
@@ -366,6 +384,62 @@ class VistaResultados extends StatelessWidget {
     }
   }
 
+  Future<void> _mostrarDocumentos(ProveedorSimulador proveedor) async {
+    final ctx = proveedor.context;
+    if (ctx == null || !ctx.mounted) return;
+    final docs = await ReportePDF.documentosGenerados();
+    if (!ctx.mounted) return;
+    await showDialog<void>(
+      context: ctx,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Documentos PDF generados'),
+        content: SizedBox(
+          width: 580,
+          height: 380,
+          child: docs.isEmpty
+              ? const Center(
+                  child: Text(
+                    'Aún no hay documentos guardados.\nEjecuta una simulación para generar el PDF automáticamente.',
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : ListView.separated(
+                  itemCount: docs.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (c, i) {
+                    final ruta = docs[i];
+                    final nombre = ruta.split(Platform.pathSeparator).last;
+                    return ListTile(
+                      leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                      title: Text(nombre, style: const TextStyle(fontSize: 13)),
+                      subtitle: Text(
+                        ruta,
+                        style: const TextStyle(fontSize: 11),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: TextButton(
+                        onPressed: () => ReportePDF.abrirRuta(ruta),
+                        child: const Text('Abrir'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => ReportePDF.abrirCarpetaDocumentos(),
+            child: const Text('Abrir carpeta'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _recalcular(ProveedorSimulador proveedor) async {
     proveedor.procesarSimulacionSimple(
       proveedor.ultimaTREMA > 0 ? proveedor.ultimaTREMA : 12.0,
@@ -422,4 +496,74 @@ class _KPICard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Widget invisible que dispara el autoguardado del PDF cuando hay resultados.
+class _AutoguardadoPDF extends StatefulWidget {
+  final ProveedorSimulador proveedor;
+  final ResultadoEvaluacion evaluacion;
+  final String firma;
+
+  const _AutoguardadoPDF({
+    required this.proveedor,
+    required this.evaluacion,
+    required this.firma,
+  });
+
+  @override
+  State<_AutoguardadoPDF> createState() => _AutoguardadoPDFState();
+}
+
+class _AutoguardadoPDFState extends State<_AutoguardadoPDF> {
+  String? _firmaGuardada;
+  bool _guardando = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _intentarGuardar();
+  }
+
+  @override
+  void didUpdateWidget(covariant _AutoguardadoPDF oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.firma != widget.firma) {
+      _intentarGuardar();
+    }
+  }
+
+  Future<void> _intentarGuardar() async {
+    if (_guardando || _firmaGuardada == widget.firma) return;
+    _guardando = true;
+    try {
+      final bytes = await ReportePDF.generar(
+        evaluacion: widget.evaluacion,
+        nombreProyecto: 'Sistema de Riego',
+        nombreUsuario: 'Usuario',
+      );
+      final ruta = await ReportePDF.guardarEnDocumentos(
+        bytes: bytes,
+        nombreProyecto: 'Sistema de Riego',
+      );
+      _firmaGuardada = widget.firma;
+
+      final ctx = widget.proveedor.context;
+      if (ctx != null && ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(
+            content: Text('PDF guardado automáticamente en: $ruta'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    } catch (_) {
+      // Si falla el guardado automático no se bloquea la vista de resultados.
+    } finally {
+      _guardando = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }

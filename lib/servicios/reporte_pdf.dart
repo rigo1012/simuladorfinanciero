@@ -102,13 +102,50 @@ class ReportePDF {
     required String nombreProyecto,
   }) async {
     final directorio = await getApplicationDocumentsDirectory();
-    final fecha = DateTime.now().toIso8601String().split('T')[0];
+    final ahora = DateTime.now();
+    final fecha = ahora.toIso8601String().split('T')[0];
+    final hora = '${ahora.hour.toString().padLeft(2, '0')}'
+        '${ahora.minute.toString().padLeft(2, '0')}'
+        '${ahora.second.toString().padLeft(2, '0')}';
     final nombreSeguro = nombreProyecto.replaceAll(RegExp(r'[^\w\-]+'), '_');
     final archivo = File(
-      '${directorio.path}${Platform.pathSeparator}Evaluacion_${nombreSeguro}_$fecha.pdf',
+      '${directorio.path}${Platform.pathSeparator}Evaluacion_${nombreSeguro}_${fecha}_$hora.pdf',
     );
     await archivo.writeAsBytes(bytes, flush: true);
     return archivo.path;
+  }
+
+  /// Lista los PDF de evaluación guardados, del más reciente al más antiguo.
+  static Future<List<String>> documentosGenerados() async {
+    final directorio = await getApplicationDocumentsDirectory();
+    if (!directorio.existsSync()) return [];
+    final archivos = directorio
+        .listSync()
+        .whereType<File>()
+        .where((f) {
+          final nombre = f.path.split(Platform.pathSeparator).last.toLowerCase();
+          return nombre.startsWith('evaluacion_') && nombre.endsWith('.pdf');
+        })
+        .toList()
+      ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+    return archivos.map((f) => f.path).toList();
+  }
+
+  /// Abre la carpeta de Documentos del usuario en el explorador del sistema.
+  static Future<void> abrirCarpetaDocumentos() async {
+    final directorio = await getApplicationDocumentsDirectory();
+    await abrirRuta(directorio.path);
+  }
+
+  /// Abre un archivo o carpeta con la aplicación predeterminada del sistema.
+  static Future<void> abrirRuta(String ruta) async {
+    if (Platform.isWindows) {
+      await Process.run('explorer', [ruta]);
+    } else if (Platform.isMacOS) {
+      await Process.run('open', [ruta]);
+    } else {
+      await Process.run('xdg-open', [ruta]);
+    }
   }
 
   /// Abre el diálogo de impresión/compartir con los bytes ya generados.
