@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import 'diseno_escritorio.dart';
+import 'pantalla_glosario.dart';
 
 class VistaDashboard extends StatelessWidget {
   const VistaDashboard({super.key});
@@ -13,7 +14,20 @@ class VistaDashboard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Historial de Simulaciones', style: TextStyle(fontSize: 20)),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Historial de Simulaciones', style: TextStyle(fontSize: 20)),
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.menu_book_outlined, size: 18),
+                label: const Text('Glosario'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PantallaGlosario()),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           Expanded(
             flex: 3,

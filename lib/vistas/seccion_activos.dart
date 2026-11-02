@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/activo.dart';
+import 'ayuda_concepto.dart';
 
 /// Widget para la sección de **Activos** (Inversión Requerida).
 /// 
@@ -241,9 +242,14 @@ class _SeccionActivosState extends State<SeccionActivos> {
                     const SizedBox(height: 16),
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Text(
-                        '¿El activo es depreciable? *',
-                        style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                      child: Row(
+                        children: [
+                          Text(
+                            '¿El activo es depreciable? *',
+                            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                          ),
+                          const AyudaConcepto(termino: 'depreciacion'),
+                        ],
                       ),
                     ),
                     Row(
@@ -276,6 +282,7 @@ class _SeccionActivosState extends State<SeccionActivos> {
                           labelText: 'Vida útil (años) *',
                           hintText: 'Capture la vida útil',
                           border: OutlineInputBorder(),
+                          suffixIcon: AyudaConcepto(termino: 'vida_util'),
                         ),
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -544,9 +551,14 @@ class _ActivoCardState extends State<_ActivoCard> {
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  '¿El activo es depreciable? *',
-                  style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                child: Row(
+                  children: [
+                    Text(
+                      '¿El activo es depreciable? *',
+                      style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                    ),
+                    const AyudaConcepto(termino: 'depreciacion'),
+                  ],
                 ),
               ),
               Row(
@@ -578,6 +590,7 @@ class _ActivoCardState extends State<_ActivoCard> {
                     labelText: 'Vida útil (años)',
                     isDense: true,
                     border: OutlineInputBorder(),
+                    suffixIcon: AyudaConcepto(termino: 'vida_util'),
                   ),
                   keyboardType: TextInputType.number,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],

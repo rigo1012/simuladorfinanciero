@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/costo_variable.dart';
+import 'ayuda_concepto.dart';
 
 /// Sección para Costos Variables por Periodo.
 /// 
@@ -108,9 +109,16 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Costos Variables por Periodo',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              const Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Costos Variables por Periodo',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  AyudaConcepto(termino: 'costos_variables'),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -120,6 +128,16 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
               Text(
                 'Tres categorías: Materia Prima • Mano de Obra • Cargos Indirectos',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+              ),
+              const SizedBox(height: 6),
+              const Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
+                  Row(mainAxisSize: MainAxisSize.min, children: [Text('Materia prima', style: TextStyle(fontSize: 12)), AyudaConcepto(termino: 'materia_prima')]),
+                  Row(mainAxisSize: MainAxisSize.min, children: [Text('Mano de obra', style: TextStyle(fontSize: 12)), AyudaConcepto(termino: 'mano_obra')]),
+                  Row(mainAxisSize: MainAxisSize.min, children: [Text('Cargos indirectos', style: TextStyle(fontSize: 12)), AyudaConcepto(termino: 'cargos_indirectos')]),
+                ],
               ),
             ],
           ),
@@ -147,6 +165,7 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
                 'Inflación Anual Estimada',
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange.shade800, fontSize: 16),
               ),
+              const AyudaConcepto(termino: 'inflacion'),
               const Spacer(),
               Text(
                 '(Consultar BANXICO)',

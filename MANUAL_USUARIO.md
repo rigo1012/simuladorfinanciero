@@ -43,6 +43,7 @@
 11. [Preguntas frecuentes](#11-preguntas-frecuentes)
 12. [Limitaciones conocidas](#12-limitaciones-conocidas)
 13. [Soporte](#13-soporte)
+14. [Glosario de términos](#14-glosario-de-términos)
 
 ---
 
@@ -480,6 +481,47 @@ El Dashboard también muestra el historial de simulaciones ejecutadas (inversió
 
 Al reportar un problema incluye: pasos para reproducirlo, datos capturados (capturas de pantalla),
 mensaje de error exacto y versión de la aplicación.
+
+---
+
+## 14. Glosario de términos
+
+La aplicación incluye este glosario en contexto: junto a los campos y encabezados hay un icono de
+información, y en la pestaña Dashboard está el botón **“Glosario”** con búsqueda.
+
+| Término | Definición |
+|---|---|
+| TREMA | Rentabilidad mínima que el inversionista exige al proyecto, expresada como tasa anual. |
+| Tasa por periodo | Tasa equivalente a la TREMA anual para la duración de un periodo. |
+| VPN | Diferencia entre el valor presente de los flujos de caja y la inversión inicial. |
+| TIR | Tasa de descuento que hace que el VPN sea cero; se muestra anual efectiva. |
+| Beneficio/Costo (B/C) | Cociente entre el valor presente de los beneficios y el de los costos. |
+| Payback simple | Periodos necesarios para que los flujos acumulados igualen la inversión inicial. |
+| Payback descontado | Periodos necesarios para que el VPN acumulado iguale la inversión inicial. |
+| EBITDA | Ingresos menos costos variables y fijos, antes de intereses e impuestos. |
+| UAI | Utilidad antes de impuestos: EBITDA menos intereses. |
+| ISR | Impuesto sobre la renta aplicado a la utilidad fiscal después de la depreciación. |
+| Depreciación | Asignación lineal del costo de un activo depreciable durante su vida útil. |
+| Vida útil | Años durante los cuales se espera utilizar un activo depreciable. |
+| Valor residual | Valor recuperado de los activos al final del horizonte de evaluación. |
+| Sistema francés | Amortización de un crédito con cuotas periódicas fijas. |
+| Amortización de capital | Parte de la cuota que reduce el principal del crédito. |
+| Interés | Costo financiero por el uso del crédito. |
+| Saldo insoluto | Capital del crédito que aún queda por pagar. |
+| Inflación | Aumento general de precios que reduce el poder adquisitivo. |
+| Costos variables | Costos que cambian en proporción a la producción. |
+| Costos fijos | Costos que no dependen del volumen de producción. |
+| Materia prima | Insumos físicos consumidos en el proceso productivo. |
+| Mano de obra | Costo del trabajo humano requerido para las operaciones. |
+| Cargos indirectos | Costos de producción no identificables con un insumo específico. |
+| Periodo | Intervalo de tiempo en el que se agrupan ingresos, costos y flujos. |
+| Ciclos por año | Número de ciclos productivos realizados en un año. |
+| Horizonte | Años que abarca la evaluación financiera. |
+| Ahorro de agua | Volumen de agua que se deja de consumir por ciclo. |
+| Otros ingresos | Ingresos distintos de la venta del producto principal. |
+| Capital propio | Parte de la inversión aportada con recursos del inversionista. |
+| Deuda | Parte de la inversión financiada con crédito. |
+| ROI | Relación entre el valor generado y el monto invertido. |
 
 ---
 

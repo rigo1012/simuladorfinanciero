@@ -5,6 +5,7 @@ import '../controladores/proveedor_simulador.dart';
 import '../servicios/motor_fen.dart';
 import '../servicios/evaluador_financiero.dart';
 import '../servicios/reporte_pdf.dart';
+import 'ayuda_concepto.dart';
 
 /// Vista de Resultados: muestra la evaluación financiera completa con opción a exportar PDF.
 class VistaResultados extends StatelessWidget {
@@ -154,35 +155,35 @@ class VistaResultados extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: _KPICard(label: 'VPN', value: _formatCurrency(vpn), icon: Icons.attach_money, color: vpn >= 0 ? Colors.green : Colors.red)),
+            Expanded(child: _KPICard(label: 'VPN', value: _formatCurrency(vpn), icon: Icons.attach_money, color: vpn >= 0 ? Colors.green : Colors.red, termino: 'vpn')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'VPN Operativo', value: _formatCurrency(vpnOperativo), icon: Icons.business, color: vpnOperativo >= 0 ? Colors.green : Colors.red)),
+            Expanded(child: _KPICard(label: 'VPN Operativo', value: _formatCurrency(vpnOperativo), icon: Icons.business, color: vpnOperativo >= 0 ? Colors.green : Colors.red, termino: 'vpn')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'TIR', value: tir != null ? '${tir.toStringAsFixed(2)}%' : 'N/A', icon: Icons.trending_up, color: Colors.blue)),
+            Expanded(child: _KPICard(label: 'TIR', value: tir != null ? '${tir.toStringAsFixed(2)}%' : 'N/A', icon: Icons.trending_up, color: Colors.blue, termino: 'tir')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'TIR Operativa', value: tirOperativa != null ? '${tirOperativa.toStringAsFixed(2)}%' : 'N/A', icon: Icons.trending_up, color: Colors.indigo)),
+            Expanded(child: _KPICard(label: 'TIR Operativa', value: tirOperativa != null ? '${tirOperativa.toStringAsFixed(2)}%' : 'N/A', icon: Icons.trending_up, color: Colors.indigo, termino: 'tir')),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _KPICard(label: 'Payback', value: payback != null ? '$payback per. (${(kpis['payback_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera', icon: Icons.timer, color: payback != null ? Colors.green : Colors.orange)),
+            Expanded(child: _KPICard(label: 'Payback', value: payback != null ? '$payback per. (${(kpis['payback_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera', icon: Icons.timer, color: payback != null ? Colors.green : Colors.orange, termino: 'payback_simple')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'Payback Desc.', value: paybackDesc != null ? '$paybackDesc per. (${(kpis['payback_descontado_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera', icon: Icons.timer_off, color: paybackDesc != null ? Colors.green : Colors.orange)),
+            Expanded(child: _KPICard(label: 'Payback Desc.', value: paybackDesc != null ? '$paybackDesc per. (${(kpis['payback_descontado_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera', icon: Icons.timer_off, color: paybackDesc != null ? Colors.green : Colors.orange, termino: 'payback_descontado')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'B/C', value: bc.toStringAsFixed(2), icon: Icons.balance, color: bc >= 1 ? Colors.green : Colors.red)),
+            Expanded(child: _KPICard(label: 'B/C', value: bc.toStringAsFixed(2), icon: Icons.balance, color: bc >= 1 ? Colors.green : Colors.red, termino: 'beneficio_costo')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'B/C Oper.', value: bcOp.toStringAsFixed(2), icon: Icons.balance, color: bcOp >= 1 ? Colors.green : Colors.red)),
+            Expanded(child: _KPICard(label: 'B/C Oper.', value: bcOp.toStringAsFixed(2), icon: Icons.balance, color: bcOp >= 1 ? Colors.green : Colors.red, termino: 'beneficio_costo')),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _KPICard(label: 'ROI Inversión', value: '${kpis['roi']?.toStringAsFixed(1) ?? 0}%', icon: Icons.percent, color: Colors.purple)),
+            Expanded(child: _KPICard(label: 'ROI Inversión', value: '${kpis['roi']?.toStringAsFixed(1) ?? 0}%', icon: Icons.percent, color: Colors.purple, termino: 'roi')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'ROI Aporte', value: '${kpis['roi_aporte']?.toStringAsFixed(1) ?? 0}%', icon: Icons.account_balance_wallet, color: Colors.teal)),
+            Expanded(child: _KPICard(label: 'ROI Aporte', value: '${kpis['roi_aporte']?.toStringAsFixed(1) ?? 0}%', icon: Icons.account_balance_wallet, color: Colors.teal, termino: 'roi')),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'Margen EBITDA', value: '${kpis['margen_ebitda']?.toStringAsFixed(1) ?? 0}%', icon: Icons.show_chart, color: Colors.deepOrange)),
+            Expanded(child: _KPICard(label: 'Margen EBITDA', value: '${kpis['margen_ebitda']?.toStringAsFixed(1) ?? 0}%', icon: Icons.show_chart, color: Colors.deepOrange, termino: 'ebitda')),
             const SizedBox(width: 12),
             Expanded(child: _KPICard(label: 'Margen Neto', value: '${kpis['margen_neto']?.toStringAsFixed(1) ?? 0}%', icon: Icons.analytics, color: Colors.cyan)),
           ],
@@ -238,14 +239,14 @@ class VistaResultados extends StatelessWidget {
           DataColumn(label: Text('Ingresos'), numeric: true),
           DataColumn(label: Text('Cost. Var.'), numeric: true),
           DataColumn(label: Text('Cost. Fix'), numeric: true),
-          DataColumn(label: Text('EBITDA'), numeric: true),
-          DataColumn(label: Text('Intereses'), numeric: true),
-          DataColumn(label: Text('UAI'), numeric: true),
-          DataColumn(label: Text('Depreciación'), numeric: true),
-          DataColumn(label: Text('Impuestos'), numeric: true),
-          DataColumn(label: Text('Amort. Cap.'), numeric: true),
+          DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [Text('EBITDA'), AyudaConcepto(termino: 'ebitda', tamanoIcono: 14)]), numeric: true),
+          DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Intereses'), AyudaConcepto(termino: 'interes', tamanoIcono: 14)]), numeric: true),
+          DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [Text('UAI'), AyudaConcepto(termino: 'uai', tamanoIcono: 14)]), numeric: true),
+          DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Depreciación'), AyudaConcepto(termino: 'depreciacion', tamanoIcono: 14)]), numeric: true),
+          DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Impuestos'), AyudaConcepto(termino: 'isr', tamanoIcono: 14)]), numeric: true),
+          DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Amort. Cap.'), AyudaConcepto(termino: 'amortizacion_capital', tamanoIcono: 14)]), numeric: true),
           DataColumn(label: Text('Liq. Saldo'), numeric: true),
-          DataColumn(label: Text('Val. Res.'), numeric: true),
+          DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [Text('Val. Res.'), AyudaConcepto(termino: 'valor_residual', tamanoIcono: 14)]), numeric: true),
           DataColumn(label: Text('FLUJO CAJA'), numeric: true),
         ],
         rows: flujosData.map((f) {
@@ -481,11 +482,13 @@ class _KPICard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final String? termino;
 
-  const _KPICard({required this.label, required this.value, required this.icon, required this.color});
+  const _KPICard({required this.label, required this.value, required this.icon, required this.color, this.termino});
 
   @override
   Widget build(BuildContext context) {
+    final clave = termino;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -497,7 +500,19 @@ class _KPICard extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 28),
           const SizedBox(height: 8),
-          Text(label, style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8), fontWeight: FontWeight.w600)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8), fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (clave != null) AyudaConcepto(termino: clave, tamanoIcono: 14),
+            ],
+          ),
           const SizedBox(height: 4),
           Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
         ],

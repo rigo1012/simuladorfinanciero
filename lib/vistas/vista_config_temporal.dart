@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/configuracion_temporal.dart';
+import 'ayuda_concepto.dart';
 
 /// Paso 0 obligatorio: Configuración Temporal del Proyecto.
 /// 
@@ -246,6 +247,7 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
         hintText: 'Ej: 3 (trimestral), 4 (cuatrimestral), 6 (semestral)...',
         border: const OutlineInputBorder(),
         prefixIcon: const Icon(Icons.calendar_month),
+        suffixIcon: const AyudaConcepto(termino: 'periodo'),
         helperText: 'Libre según ciclo de cultivo. Rábano=2-3, Cilantro=1-2, Maíz=4-6',
       ),
       keyboardType: TextInputType.number,
@@ -272,6 +274,7 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
         hintText: 'Ej: 3, 5, 7...',
         border: const OutlineInputBorder(),
         prefixIcon: const Icon(Icons.date_range),
+        suffixIcon: const AyudaConcepto(termino: 'horizonte'),
         helperText: 'Horizonte de evaluación del proyecto. Estándar: 3-5 años para infraestructura.',
       ),
       keyboardType: TextInputType.number,
@@ -298,6 +301,7 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
         hintText: 'Ej: 1, 2, 3...',
         border: const OutlineInputBorder(),
         prefixIcon: const Icon(Icons.agriculture),
+        suffixIcon: const AyudaConcepto(termino: 'ciclos_por_anio'),
         helperText: 'Rotación de cultivos. Clima templado=2, Tropical=3, Invernadero=4+',
       ),
       keyboardType: TextInputType.number,

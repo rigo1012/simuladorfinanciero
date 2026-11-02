@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'motor_fen.dart';
 import 'evaluador_financiero.dart';
 import '../modelos/estructura_capital.dart';
+import '../nucleo/glosario.dart';
 
 /// Generador de reportes PDF para la evaluación financiera.
 class ReportePDF {
@@ -67,6 +68,10 @@ class ReportePDF {
           
           // 8. Sensibilidad
           _buildAnalisisSensibilidad(motor, colorPrimary),
+          pw.SizedBox(height: 16),
+
+          // 9. Apéndice: glosario de términos usados
+          _buildApendiceGlosario(colorPrimary),
         ],
       ),
     );
@@ -489,6 +494,66 @@ class ReportePDF {
   }
 
   // ==================== HELPERS ====================
+
+  static pw.Widget _buildApendiceGlosario(PdfColor primary) {
+    const claves = [
+      'trema',
+      'tasa_periodo',
+      'vpn',
+      'tir',
+      'beneficio_costo',
+      'payback_simple',
+      'payback_descontado',
+      'ebitda',
+      'uai',
+      'isr',
+      'depreciacion',
+      'vida_util',
+      'valor_residual',
+      'sistema_frances',
+      'amortizacion_capital',
+      'interes',
+      'saldo_insoluto',
+      'inflacion',
+      'costos_variables',
+      'costos_fijos',
+      'periodo',
+    ];
+
+    final filas = <List<String>>[];
+    for (final clave in claves) {
+      final termino = Glosario.buscar(clave);
+      if (termino == null) continue;
+      final nombre = termino.abreviatura != null
+          ? '${termino.nombre} (${termino.abreviatura})'
+          : termino.nombre;
+      filas.add([nombre, termino.definicion]);
+    }
+
+    return _buildSection(
+      'Apéndice: Glosario de términos',
+      primary,
+      [
+        pw.Text(
+          'Definiciones de los conceptos utilizados en este reporte.',
+          style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic),
+        ),
+        pw.SizedBox(height: 8),
+        pw.Table.fromTextArray(
+          headers: ['Término', 'Definición'],
+          data: filas,
+          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8, color: PdfColors.white),
+          headerDecoration: pw.BoxDecoration(color: primary),
+          cellStyle: pw.TextStyle(fontSize: 7),
+          columnWidths: {
+            0: const pw.FixedColumnWidth(150),
+            1: const pw.FlexColumnWidth(),
+          },
+          border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+        ),
+      ],
+    );
+  }
 
   static pw.Widget _buildSection(String title, PdfColor color, List<pw.Widget> children) {
     return pw.Column(

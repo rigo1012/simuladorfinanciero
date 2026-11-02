@@ -8,6 +8,7 @@ import 'seccion_costos_variables.dart';
 import 'seccion_costos_fijos.dart';
 import 'vista_config_temporal.dart';
 import 'vista_financiamiento.dart';
+import 'ayuda_concepto.dart';
 
 class VistaFormularioInversion extends StatefulWidget {
   const VistaFormularioInversion({super.key});
@@ -235,6 +236,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                     hintText: 'Ej: 12.5',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.percent),
+                    suffixIcon: AyudaConcepto(termino: 'trema'),
                     helperText: 'Tasa Mínima de Rentabilidad Esperada',
                   ),
                   inputFormatters: [
@@ -261,6 +263,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                     hintText: 'Ej: 5',
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.calendar_today),
+                    suffixIcon: const AyudaConcepto(termino: 'horizonte'),
                     helperText: 'Máx. ${proveedor.configTemporal?.anosProyeccion ?? 0} años (configuración temporal)',
                   ),
                   inputFormatters: [
@@ -289,6 +292,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                     hintText: 'Capture la tasa aplicable',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.receipt_long),
+                    suffixIcon: AyudaConcepto(termino: 'isr'),
                     helperText: 'Impuesto sobre la renta aplicable al proyecto',
                   ),
                   inputFormatters: [
@@ -315,6 +319,7 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                     hintText: 'Capture el porcentaje',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.recycling),
+                    suffixIcon: AyudaConcepto(termino: 'valor_residual'),
                     helperText: 'Los activos no depreciables conservan el 100%',
                   ),
                   inputFormatters: [

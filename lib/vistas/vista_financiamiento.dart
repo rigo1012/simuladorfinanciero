@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/estructura_capital.dart';
 import '../modelos/configuracion_temporal.dart';
+import 'ayuda_concepto.dart';
 
 /// Paso 1: Estructura de Financiamiento (Capital Propio vs Deuda).
 /// 
@@ -104,7 +105,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
                 if (financiamientoActual != null) const SizedBox(height: 16),
 
                 // === SECCIÓN: ESTRUCTURA DE CAPITAL ===
-                _buildSectionTitle('Estructura de Capital', Icons.account_balance_wallet),
+                _buildSectionTitle('Estructura de Capital', Icons.account_balance_wallet, terminos: const ['capital_propio', 'deuda']),
                 const SizedBox(height: 12),
                 Text(
                   'Defina cómo se financia la Inversión Requerida. La suma debe ser 100%.',
@@ -285,12 +286,15 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
+  Widget _buildSectionTitle(String title, IconData icon, {List<String> terminos = const []}) {
     return Row(
       children: [
         Icon(icon, color: Colors.purple.shade700, size: 22),
         const SizedBox(width: 10),
-        Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple.shade800)),
+        Flexible(
+          child: Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.purple.shade800)),
+        ),
+        for (final termino in terminos) AyudaConcepto(termino: termino),
       ],
     );
   }
@@ -367,7 +371,7 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Condiciones del Crédito Bancario', Icons.business),
+        _buildSectionTitle('Condiciones del Crédito Bancario', Icons.business, terminos: const ['sistema_frances', 'interes', 'saldo_insoluto']),
         const SizedBox(height: 12),
         Text(
           'Complete los datos del préstamo para calcular la amortización (Sistema Francés).',

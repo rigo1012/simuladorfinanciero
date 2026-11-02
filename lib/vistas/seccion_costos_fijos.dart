@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/costo_fijo.dart';
+import 'ayuda_concepto.dart';
 
 /// Sección para Costos Fijos por Periodo.
 /// 
@@ -103,9 +104,16 @@ class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Costos Fijos por Periodo',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              const Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Costos Fijos por Periodo',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  AyudaConcepto(termino: 'costos_fijos'),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -138,10 +146,13 @@ class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
             children: [
               Icon(Icons.info_outline, color: Colors.indigo.shade700),
               const SizedBox(width: 12),
-              Text(
-                'Inflación de Referencia (para items con toggle activado)',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade800, fontSize: 15),
+              Expanded(
+                child: Text(
+                  'Inflación de Referencia (para items con toggle activado)',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo.shade800, fontSize: 15),
+                ),
               ),
+              const AyudaConcepto(termino: 'inflacion'),
             ],
           ),
           const SizedBox(height: 12),

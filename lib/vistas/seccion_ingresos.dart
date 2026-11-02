@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:provider/provider.dart';
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/ingreso_periodo.dart';
+import 'ayuda_concepto.dart';
 
 /// Sección para ingresar Ingresos Estimados por periodo.
 /// 
@@ -79,9 +80,16 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
                 'Total de periodos: $totalPeriodos  •  Completados: $completados/$totalPeriodos',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
-              Text(
-                'Ingreso = Precio × Demanda + otros ingresos  (se calcula automáticamente)',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Ingreso = Precio × Demanda + otros ingresos  (se calcula automáticamente)',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                    ),
+                  ),
+                  const AyudaConcepto(termino: 'otros_ingresos'),
+                ],
               ),
             ],
           ),
@@ -310,7 +318,12 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
           final ingresoPeriodo = demandaPeriodo * (precioKg ?? 0) + otrosIngresosPeriodo;
 
           return AlertDialog(
-            title: const Text('Calculadora de Beneficios'),
+            title: const Row(
+              children: [
+                Expanded(child: Text('Calculadora de Beneficios')),
+                AyudaConcepto(termino: 'calculadora_beneficios'),
+              ],
+            ),
             content: SizedBox(
               width: 560,
               child: SingleChildScrollView(
@@ -411,7 +424,11 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
                           Expanded(
                             child: TextFormField(
                               controller: ahorroAguaCtrl,
-                              decoration: const InputDecoration(labelText: 'Ahorro de agua (m³/ciclo) *', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                labelText: 'Ahorro de agua (m³/ciclo) *',
+                                border: OutlineInputBorder(),
+                                suffixIcon: AyudaConcepto(termino: 'ahorro_agua'),
+                              ),
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                               onChanged: (_) => setDialogState(() {}),
