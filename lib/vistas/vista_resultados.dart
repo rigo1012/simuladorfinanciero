@@ -166,9 +166,9 @@ class VistaResultados extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _KPICard(label: 'Payback', value: payback != null ? '$payback periodos' : 'No recupera', icon: Icons.timer, color: payback != null ? Colors.green : Colors.orange)),
+            Expanded(child: _KPICard(label: 'Payback', value: payback != null ? '$payback per. (${(kpis['payback_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera', icon: Icons.timer, color: payback != null ? Colors.green : Colors.orange)),
             const SizedBox(width: 12),
-            Expanded(child: _KPICard(label: 'Payback Desc.', value: paybackDesc != null ? '$paybackDesc periodos' : 'No recupera', icon: Icons.timer_off, color: paybackDesc != null ? Colors.green : Colors.orange)),
+            Expanded(child: _KPICard(label: 'Payback Desc.', value: paybackDesc != null ? '$paybackDesc per. (${(kpis['payback_descontado_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera', icon: Icons.timer_off, color: paybackDesc != null ? Colors.green : Colors.orange)),
             const SizedBox(width: 12),
             Expanded(child: _KPICard(label: 'B/C', value: bc.toStringAsFixed(2), icon: Icons.balance, color: bc >= 1 ? Colors.green : Colors.red)),
             const SizedBox(width: 12),

@@ -241,7 +241,7 @@ class ReportePDF {
           pw.Row(
             children: [
               pw.Expanded(
-                child: _buildKPICard('Payback', eval.paybackPeriodos != null ? '${eval.paybackPeriodos} periodos' : 'No recupera', primary),
+                child: _buildKPICard('Payback', eval.paybackPeriodos != null ? '${eval.paybackPeriodos} per. (${(eval.kpis['payback_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera', primary),
               ),
               pw.SizedBox(width: 12),
               pw.Expanded(
@@ -329,8 +329,8 @@ class ReportePDF {
         _buildInfoRow('VPN Operativo (sin financiamiento)', _formatCurrency(eval.vpnOperativo), valueColor: eval.vpnOperativo >= 0 ? PdfColors.green800 : PdfColors.red800),
         _buildInfoRow('TIR (con financiamiento)', eval.tir != null ? '${eval.tir?.toStringAsFixed(2)}%' : 'No calculable'),
         _buildInfoRow('TIR Operativa', eval.tirOperativa != null ? '${eval.tirOperativa?.toStringAsFixed(2)}%' : 'No calculable'),
-        _buildInfoRow('Payback Simple', eval.paybackPeriodos != null ? '${eval.paybackPeriodos} periodos' : 'No recupera'),
-        _buildInfoRow('Payback Descontado', eval.paybackDescontado != null ? '${eval.paybackDescontado} periodos' : 'No recupera'),
+        _buildInfoRow('Payback Simple', eval.paybackPeriodos != null ? '${eval.paybackPeriodos} periodos (${(eval.kpis['payback_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera'),
+        _buildInfoRow('Payback Descontado', eval.paybackDescontado != null ? '${eval.paybackDescontado} periodos (${(eval.kpis['payback_descontado_anios'] as num?)?.toStringAsFixed(2) ?? '-'} años)' : 'No recupera'),
         _buildInfoRow('Beneficio / Costo (B/C)', eval.beneficioCosto.toStringAsFixed(2)),
         _buildInfoRow('B/C Operativo', eval.beneficioCostoOperativo.toStringAsFixed(2)),
         _buildInfoRow('ROI sobre Inversión', '${kpis['roi']?.toStringAsFixed(1)}%'),

@@ -80,10 +80,10 @@ class EvaluadorFinanciero {
     final paybackDesc = _calcularPaybackDescontado(flujos, tasaPeriodo);
 
     // 7. Beneficio/Costo (con financiamiento)
-    final bc = _calcularBC(flujos, tasaPeriodo);
+    final bc = _calcularBC(motor, tasaPeriodo, conFinanciamiento: true);
     
     // 8. Beneficio/Costo Operativo
-    final bcOperativo = _calcularBC(flujosOperativos, tasaPeriodo);
+    final bcOperativo = _calcularBC(motor, tasaPeriodo, conFinanciamiento: false);
 
     // 9. Veredicto
     final esViable = vpn > 0;
@@ -218,17 +218,67 @@ class EvaluadorFinanciero {
     return null;
   }
 
-  /// Relación Beneficio/Costo = PV(Beneficios) / PV(Costos)
-  static double _calcularBC(List<double> flujos, double tasa) {
-    double pvBeneficios = 0, pvCostos = 0;
-    for (int t = 1; t < flujos.length; t++) { // t=0 es inversión
-      final pv = flujos[t] / math.pow(1 + tasa, t);
-      if (pv > 0) pvBeneficios += pv;
-      else pvCostos += pv.abs();
+  /// Relación Beneficio/Costo real:
+  /// VP(ingresos + valor residual) /
+  /// (inversión inicial + VP(costos variables + costos fijos + impuestos [+ intereses]))
+  static double _calcularBC(ResultadoMotorFEN motor, double tasa, {required bool conFinanciamiento}) {
+    final flujos = motor.flujos;
+    double pvBeneficios = 0;
+    double pvCostos = 0;
+
+    for (int t = 1; t < flujos.length; t++) {
+      final factor = math.pow(1 + tasa, t);
+      final f = flujos[t];
+      pvBeneficios += (f.ingreso + f.valorResidual) / factor;
+
+      final impuesto = conFinanciamiento ? f.impuesto : f.impuestoOperativo;
+      final intereses = conFinanciamiento ? f.interes : 0.0;
+      pvCostos += (f.costoVariable + f.costoFijo + impuesto + intereses) / factor;
     }
-    // Inversión inicial también es costo
-    pvCostos += flujos[0].abs();
-    return pvCostos > 0 ? pvBeneficios / pvCostos : double.infinity;
+
+    final denominador = motor.inversionRequerida + pvCostos;
+    return denominador > 0 ? pvBeneficios / denominador : double.infinity;
+  }
+
+  /// Payback simple fraccionario (en periodos) con interpolación lineal
+  /// dentro del periodo en que se recupera la inversión.
+  static double? _calcularPaybackFraccion(List<double> flujos) {
+    if (flujos.isEmpty) return null;
+    double acumulado = flujos[0];
+    if (acumulado >= 0) return 0;
+
+    for (int t = 1; t < flujos.length; t++) {
+      final anterior = acumulado;
+      acumulado += flujos[t];
+      if (acumulado >= 0) {
+        final faltante = -anterior;
+        final delPeriodo = flujos[t];
+        if (delPeriodo <= 0) return t.toDouble();
+        final fraccion = faltante / delPeriodo;
+        return (t - 1) + fraccion.clamp(0.0, 1.0);
+      }
+    }
+    return null;
+  }
+
+  /// Payback descontado fraccionario (en periodos) con interpolación lineal.
+  static double? _calcularPaybackDescontadoFraccion(List<double> flujos, double tasa) {
+    if (flujos.isEmpty) return null;
+    double acumulado = flujos[0];
+    if (acumulado >= 0) return 0;
+
+    for (int t = 1; t < flujos.length; t++) {
+      final flujoDescontado = flujos[t] / math.pow(1 + tasa, t);
+      final anterior = acumulado;
+      acumulado += flujoDescontado;
+      if (acumulado >= 0) {
+        final faltante = -anterior;
+        if (flujoDescontado <= 0) return t.toDouble();
+        final fraccion = faltante / flujoDescontado;
+        return (t - 1) + fraccion.clamp(0.0, 1.0);
+      }
+    }
+    return null;
   }
 
   /// KPIs adicionales para el reporte
@@ -255,11 +305,17 @@ class EvaluadorFinanciero {
     final ebitdaTotal = totalIngresos - (flujos.skip(1).fold(0.0, (s, f) => s + f.costoVariable + f.costoFijo));
     final utilidadTotal = ebitdaTotal - flujos.skip(1).fold(0.0, (s, f) => s + f.interes);
     final flujoCajaTotal = flujos.skip(1).fold(0.0, (s, f) => s + f.flujoCaja);
-    
+
+    // Payback fraccionario convertido a años.
+    final anosPorPeriodo = motor.config.mesesPorPeriodo / 12.0;
+    final paybackFraccion = _calcularPaybackFraccion(motor.flujosParaVPN);
+    final paybackDescFraccion =
+        _calcularPaybackDescontadoFraccion(motor.flujosParaVPN, motor.tasaPeriodo);
+
     return {
       'inversion_requerida': motor.inversionRequerida,
       'aporte_propio': motor.aportePropio,
-      'monto_prestamo': motor.montoPrestamo,
+      'monto_prestamo': prestamo,
       'total_ingresos': totalIngresos,
       'total_costos_variables': totalCostosVar,
       'total_costos_fijos': totalCostosFix,
@@ -271,6 +327,9 @@ class EvaluadorFinanciero {
       'utilidad_total': utilidadTotal,
       'flujo_caja_total': flujoCajaTotal,
       'valor_residual': flujos.last.valorResidual,
+      'payback_anios': paybackFraccion == null ? null : paybackFraccion * anosPorPeriodo,
+      'payback_descontado_anios':
+          paybackDescFraccion == null ? null : paybackDescFraccion * anosPorPeriodo,
       'roi': inversion > 0 ? (vpn / inversion) * 100 : 0,
       'roi_aporte': aporte > 0 ? (vpn / aporte) * 100 : 0,
       'margen_ebitda': totalIngresos > 0 ? (ebitdaTotal / totalIngresos) * 100 : 0,
