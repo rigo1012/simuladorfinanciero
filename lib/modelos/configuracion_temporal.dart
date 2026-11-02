@@ -27,10 +27,6 @@ class ConfiguracionTemporal {
   /// Total de meses en el horizonte.
   int get totalMeses => anosProyeccion * 12;
 
-  /// Meses productivos totales (considerando rotación).
-  /// Si mesesPorPeriodo=3 y cosechasPorAnio=2 → 6 meses productivos/año.
-  int get mesesProductivosTotales => anosProyeccion * cosechasPorAnio * (12 / cosechasPorAnio).round();
-
   /// Valida que la configuración sea coherente.
   String? validar() {
     if (mesesPorPeriodo < 1) return 'Meses por periodo debe ser ≥ 1';
@@ -54,9 +50,9 @@ class ConfiguracionTemporal {
 
   factory ConfiguracionTemporal.fromMap(Map<String, dynamic> map) {
     return ConfiguracionTemporal(
-      mesesPorPeriodo: map['meses_por_periodo'] as int,
-      anosProyeccion: map['anos_proyeccion'] as int,
-      cosechasPorAnio: map['cosechas_por_anio'] as int,
+      mesesPorPeriodo: (map['meses_por_periodo'] as num).toInt(),
+      anosProyeccion: (map['anos_proyeccion'] as num).toInt(),
+      cosechasPorAnio: (map['cosechas_por_anio'] as num).toInt(),
     );
   }
 

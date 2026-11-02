@@ -47,7 +47,7 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
             const SizedBox(height: 16),
 
             // Botón llenar rápido / limpiar
-            _buildActionButtons(proveedor, totalPeriodos),
+            _buildActionButtons(proveedor, totalPeriodos, config?.mesesPorPeriodo ?? 0),
           ],
         );
       },
@@ -80,7 +80,7 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
               Text(
-                'Ingreso = Precio × Demanda  (se calcula automáticamente)',
+                'Ingreso = Precio × Demanda + otros ingresos  (se calcula automáticamente)',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
               ),
             ],
@@ -159,8 +159,14 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
           periodo: periodo,
           precioInicial: tieneDatos ? ingreso.precio : null,
           demandaInicial: tieneDatos ? ingreso.demanda : null,
+          otrosIngresosInicial: tieneDatos ? ingreso.otrosIngresos : 0,
           onSave: (precio, demanda) => proveedor.actualizarIngreso(
-            IngresoPeriodo(periodo: periodo, precio: precio, demanda: demanda),
+            IngresoPeriodo(
+              periodo: periodo,
+              precio: precio,
+              demanda: demanda,
+              otrosIngresos: tieneDatos ? ingreso.otrosIngresos : 0,
+            ),
           ),
           onDelete: () => proveedor.eliminarIngreso(periodo),
         );
@@ -210,45 +216,322 @@ class _SeccionIngresosState extends State<SeccionIngresos> {
     );
   }
 
-  Widget _buildActionButtons(ProveedorSimulador proveedor, int totalPeriodos) {
-    return Row(
+  Widget _buildActionButtons(ProveedorSimulador proveedor, int totalPeriodos, int mesesPorPeriodo) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.auto_fix_high, size: 20),
-            label: const Text('Llenar con Patrón'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              side: BorderSide(color: Colors.teal.shade400, width: 2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              foregroundColor: Colors.teal.shade700,
-            ),
-            onPressed: () => _showPatronDialog(proveedor, totalPeriodos),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.calculate_outlined, size: 20),
+          label: const Text('Calculadora de Beneficios'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            side: BorderSide(color: Colors.blue.shade400, width: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            foregroundColor: Colors.blue.shade700,
           ),
+          onPressed: () => _showCalculadoraBeneficios(proveedor, totalPeriodos, mesesPorPeriodo),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.clear_all, size: 20),
-            label: const Text('Limpiar Todo'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              side: BorderSide(color: Colors.red.shade400, width: 2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              foregroundColor: Colors.red.shade700,
-            ),
-            onPressed: () => _confirmarLimpiar(proveedor),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.auto_fix_high, size: 20),
+          label: const Text('Llenar con Patrón'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            side: BorderSide(color: Colors.teal.shade400, width: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            foregroundColor: Colors.teal.shade700,
           ),
+          onPressed: () => _showPatronDialog(proveedor, totalPeriodos),
+        ),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.clear_all, size: 20),
+          label: const Text('Limpiar Todo'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            side: BorderSide(color: Colors.red.shade400, width: 2),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            foregroundColor: Colors.red.shade700,
+          ),
+          onPressed: () => _confirmarLimpiar(proveedor),
         ),
       ],
     );
   }
 
+  Future<void> _showCalculadoraBeneficios(
+    ProveedorSimulador proveedor,
+    int totalPeriodos,
+    int mesesPorPeriodo,
+  ) async {
+    final superficieCtrl = TextEditingController();
+    final cultivoCtrl = TextEditingController();
+    final rendSinCtrl = TextEditingController();
+    final rendConCtrl = TextEditingController();
+    final precioKgCtrl = TextEditingController();
+    final ciclosAnioCtrl = TextEditingController();
+    final ahorroAguaCtrl = TextEditingController();
+    final costoAguaCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          final superficie = double.tryParse(superficieCtrl.text);
+          final rendSin = double.tryParse(rendSinCtrl.text);
+          final rendCon = double.tryParse(rendConCtrl.text);
+          final precioKg = double.tryParse(precioKgCtrl.text);
+          final ciclosAnio = int.tryParse(ciclosAnioCtrl.text);
+          final ahorroAgua = double.tryParse(ahorroAguaCtrl.text);
+          final costoAgua = double.tryParse(costoAguaCtrl.text);
+
+          final datosValidos = superficie != null &&
+              superficie > 0 &&
+              rendSin != null &&
+              rendSin >= 0 &&
+              rendCon != null &&
+              rendCon > rendSin &&
+              precioKg != null &&
+              precioKg > 0 &&
+              ciclosAnio != null &&
+              ciclosAnio > 0 &&
+              ahorroAgua != null &&
+              ahorroAgua >= 0 &&
+              costoAgua != null &&
+              costoAgua >= 0;
+
+          final kgPorCiclo = datosValidos ? ((rendCon ?? 0) - (rendSin ?? 0)) * (superficie ?? 0) : 0.0;
+          final ciclosPorPeriodo = datosValidos && mesesPorPeriodo > 0
+              ? (ciclosAnio ?? 0) * mesesPorPeriodo / 12.0
+              : 0.0;
+          final demandaPeriodo = kgPorCiclo * ciclosPorPeriodo;
+          final ahorroPeriodo = datosValidos ? (ahorroAgua ?? 0) * ciclosPorPeriodo : 0.0;
+          final otrosIngresosPeriodo = ahorroPeriodo * (costoAgua ?? 0);
+          final ingresoPeriodo = demandaPeriodo * (precioKg ?? 0) + otrosIngresosPeriodo;
+
+          return AlertDialog(
+            title: const Text('Calculadora de Beneficios'),
+            content: SizedBox(
+              width: 560,
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Capture los datos del cultivo. No hay valores predeterminados.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: cultivoCtrl,
+                        decoration: const InputDecoration(labelText: 'Cultivo *', hintText: 'Texto libre', border: OutlineInputBorder()),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: superficieCtrl,
+                              decoration: const InputDecoration(labelText: 'Superficie (m²) *', border: OutlineInputBorder()),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                              onChanged: (_) => setDialogState(() {}),
+                              validator: _validarPositivo,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: ciclosAnioCtrl,
+                              decoration: const InputDecoration(labelText: 'Ciclos por año *', border: OutlineInputBorder()),
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              onChanged: (_) => setDialogState(() {}),
+                              validator: (v) {
+                                if (v == null || v.isEmpty) return 'Requerido';
+                                final n = int.tryParse(v);
+                                if (n == null || n <= 0) return 'Debe ser > 0';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: rendSinCtrl,
+                              decoration: const InputDecoration(labelText: 'Rendimiento SIN riego (kg/m²/ciclo) *', border: OutlineInputBorder()),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                              onChanged: (_) => setDialogState(() {}),
+                              validator: _validarNoNegativo,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: rendConCtrl,
+                              decoration: const InputDecoration(labelText: 'Rendimiento CON riego (kg/m²/ciclo) *', border: OutlineInputBorder()),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                              onChanged: (_) => setDialogState(() {}),
+                              validator: (v) {
+                                final base = _validarPositivo(v);
+                                if (base != null) return base;
+                                final sin = double.tryParse(rendSinCtrl.text);
+                                final con = double.tryParse(v ?? '');
+                                if (sin != null && con != null && con <= sin) {
+                                  return 'Debe ser mayor que SIN riego';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: precioKgCtrl,
+                        decoration: const InputDecoration(labelText: 'Precio por kg (\$) *', prefixText: '\$ ', border: OutlineInputBorder()),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                        onChanged: (_) => setDialogState(() {}),
+                        validator: _validarPositivo,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: ahorroAguaCtrl,
+                              decoration: const InputDecoration(labelText: 'Ahorro de agua (m³/ciclo) *', border: OutlineInputBorder()),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                              onChanged: (_) => setDialogState(() {}),
+                              validator: _validarNoNegativo,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: costoAguaCtrl,
+                              decoration: const InputDecoration(labelText: 'Costo del agua (\$/m³) *', prefixText: '\$ ', border: OutlineInputBorder()),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+                              onChanged: (_) => setDialogState(() {}),
+                              validator: _validarNoNegativo,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Resumen previo', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800)),
+                            const SizedBox(height: 8),
+                            _resumenFila('Cultivo', cultivoCtrl.text.trim().isEmpty ? '-' : cultivoCtrl.text.trim()),
+                            _resumenFila('Kg incrementales por ciclo', _formatNumber(kgPorCiclo)),
+                            _resumenFila('Ciclos por periodo', ciclosPorPeriodo.toStringAsFixed(4)),
+                            _resumenFila('Demanda por periodo (kg)', _formatNumber(demandaPeriodo)),
+                            _resumenFila('Venta por periodo', '\$${_formatCurrency(demandaPeriodo * (precioKg ?? 0))}'),
+                            _resumenFila('Ahorro de agua por periodo (m³)', _formatNumber(ahorroPeriodo)),
+                            _resumenFila('Ingreso por ahorro de agua', '\$${_formatCurrency(otrosIngresosPeriodo)}'),
+                            const Divider(),
+                            _resumenFila('Ingreso total por periodo', '\$${_formatCurrency(ingresoPeriodo)}'),
+                            _resumenFila('Periodos a generar', '$totalPeriodos'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              FilledButton(
+                onPressed: () {
+                  if (formKey.currentState?.validate() != true) return;
+                  if (!datosValidos) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      const SnackBar(content: Text('Complete todos los datos de la calculadora'), backgroundColor: Colors.orange),
+                    );
+                    return;
+                  }
+                  for (int p = 1; p <= totalPeriodos; p++) {
+                    proveedor.actualizarIngreso(IngresoPeriodo(
+                      periodo: p,
+                      precio: precioKg,
+                      demanda: demandaPeriodo,
+                      otrosIngresos: otrosIngresosPeriodo,
+                    ));
+                  }
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Ingresos calculados para $totalPeriodos periodos'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700),
+                child: const Text('Aplicar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String? _validarPositivo(String? valor) {
+    if (valor == null || valor.isEmpty) return 'Requerido';
+    final n = double.tryParse(valor);
+    if (n == null || n <= 0) return 'Debe ser > 0';
+    return null;
+  }
+
+  String? _validarNoNegativo(String? valor) {
+    if (valor == null || valor.isEmpty) return 'Requerido';
+    final n = double.tryParse(valor);
+    if (n == null || n < 0) return 'Debe ser ≥ 0';
+    return null;
+  }
+
+  Widget _resumenFila(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade700))),
+          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showPatronDialog(ProveedorSimulador proveedor, int totalPeriodos) async {
-    final precioBaseCtrl = TextEditingController(text: '10');
-    final demandaBaseCtrl = TextEditingController(text: '6000');
-    final crecimientoPrecioCtrl = TextEditingController(text: '5');
-    final crecimientoDemandaCtrl = TextEditingController(text: '3');
+    final precioBaseCtrl = TextEditingController();
+    final demandaBaseCtrl = TextEditingController();
+    final crecimientoPrecioCtrl = TextEditingController();
+    final crecimientoDemandaCtrl = TextEditingController();
 
     await showDialog(
       context: context,
@@ -370,6 +653,7 @@ class _IngresoRow extends StatefulWidget {
   final int periodo;
   final double? precioInicial;
   final double? demandaInicial;
+  final double otrosIngresosInicial;
   final Function(double precio, double demanda) onSave;
   final VoidCallback onDelete;
 
@@ -377,6 +661,7 @@ class _IngresoRow extends StatefulWidget {
     required this.periodo,
     this.precioInicial,
     this.demandaInicial,
+    this.otrosIngresosInicial = 0,
     required this.onSave,
     required this.onDelete,
   });
@@ -407,7 +692,7 @@ class _IngresoRowState extends State<_IngresoRow> {
   double get _ingresoCalculado {
     final precio = double.tryParse(_precioCtrl.text) ?? 0;
     final demanda = double.tryParse(_demandaCtrl.text) ?? 0;
-    return precio * demanda;
+    return precio * demanda + widget.otrosIngresosInicial;
   }
 
   void _toggleEdit() {

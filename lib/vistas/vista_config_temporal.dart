@@ -27,17 +27,10 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
   final _anosFocus = FocusNode();
   final _cosechasFocus = FocusNode();
 
-  // Valores por defecto recomendados
-  static const int _defaultMeses = 3;
-  static const int _defaultAnos = 5;
-  static const int _defaultCosechas = 2;
-
+  // Sin valores por defecto: todos los campos los captura el usuario.
   @override
   void initState() {
     super.initState();
-    _mesesCtrl.text = _defaultMeses.toString();
-    _anosCtrl.text = _defaultAnos.toString();
-    _cosechasCtrl.text = _defaultCosechas.toString();
   }
 
   @override
@@ -81,12 +74,11 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
                 _buildCosechasField(),
                 const SizedBox(height: 24),
 
-                // Resumen calculado (preview)
-                if (_formKey.currentState != null) _buildPreviewCard(),
-                const SizedBox(height: 24),
-
-                // Presets rápidos
-                _buildPresets(),
+                // Resumen calculado (solo cuando el usuario ya capturó los tres campos)
+                if (_mesesCtrl.text.isNotEmpty &&
+                    _anosCtrl.text.isNotEmpty &&
+                    _cosechasCtrl.text.isNotEmpty)
+                  _buildPreviewCard(),
                 const SizedBox(height: 24),
 
                 // Botón guardar
@@ -230,9 +222,9 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
   }
 
   void _resetForm() {
-    _mesesCtrl.text = _defaultMeses.toString();
-    _anosCtrl.text = _defaultAnos.toString();
-    _cosechasCtrl.text = _defaultCosechas.toString();
+    _mesesCtrl.clear();
+    _anosCtrl.clear();
+    _cosechasCtrl.clear();
     _formKey.currentState?.reset();
   }
 
@@ -251,6 +243,7 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
       ),
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: (_) => setState(() {}),
       validator: (v) {
         if (v == null || v.isEmpty) return 'Requerido';
         final n = int.tryParse(v);
@@ -276,6 +269,7 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
       ),
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: (_) => setState(() {}),
       validator: (v) {
         if (v == null || v.isEmpty) return 'Requerido';
         final n = int.tryParse(v);
@@ -301,6 +295,7 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
       ),
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      onChanged: (_) => setState(() {}),
       validator: (v) {
         if (v == null || v.isEmpty) return 'Requerido';
         final n = int.tryParse(v);
@@ -312,10 +307,17 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
   }
 
   Widget _buildPreviewCard() {
-    final meses = int.tryParse(_mesesCtrl.text) ?? _defaultMeses;
-    final anos = int.tryParse(_anosCtrl.text) ?? _defaultAnos;
-    final cosechas = int.tryParse(_cosechasCtrl.text) ?? _defaultCosechas;
-    
+    final meses = int.tryParse(_mesesCtrl.text) ?? 0;
+    final anos = int.tryParse(_anosCtrl.text) ?? 0;
+    final cosechas = int.tryParse(_cosechasCtrl.text) ?? 0;
+
+    if (meses < 1 || anos < 1 || cosechas < 1) {
+      return Text(
+        'Capture valores válidos en los tres campos para ver el resumen.',
+        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+      );
+    }
+
     final config = ConfiguracionTemporal(
       mesesPorPeriodo: meses,
       anosProyeccion: anos,
@@ -368,37 +370,6 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
         ],
       ),
     );
-  }
-
-  Widget _buildPresets() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Configuraciones rápidas', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: ConfiguracionesPredefinidas.comunes.map((preset) {
-            return ActionChip(
-              label: Text('${preset.mesesPorPeriodo}m/${preset.anosProyeccion}a/${preset.cosechasPorAnio}c (${preset.totalPeriodos}p)'),
-              onPressed: () => _aplicarPreset(preset),
-              backgroundColor: Colors.grey.shade100,
-              side: BorderSide(color: Colors.grey.shade300),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  void _aplicarPreset(ConfiguracionTemporal preset) {
-    setState(() {
-      _mesesCtrl.text = preset.mesesPorPeriodo.toString();
-      _anosCtrl.text = preset.anosProyeccion.toString();
-      _cosechasCtrl.text = preset.cosechasPorAnio.toString();
-    });
-    _formKey.currentState?.validate(); // Trigger preview update
   }
 
   Widget _buildSaveButton(ProveedorSimulador proveedor, bool yaConfigurado) {
