@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:simuladorfinanciero/main.dart';
 import 'package:simuladorfinanciero/controladores/proveedor_simulador.dart';
 import 'package:simuladorfinanciero/modelos/activo.dart';
 import 'package:simuladorfinanciero/modelos/configuracion_temporal.dart';

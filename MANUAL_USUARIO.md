@@ -1,389 +1,486 @@
-# Manual de Usuario - Simulador Financiero para Sistemas de Riego
+# Manual de Usuario — Simulador Financiero para Sistemas de Riego por Goteo
 
-**Versión 1.0** | **Octubre 2026**
+**Versión:** 1.0  
+**Fecha:** noviembre de 2026  
+**Autor(es):** [COMPLETAR: nombre del autor o autores]  
+**Institución:** Instituto Tecnológico Superior de Teziutlán (ITST)  
+**Proyecto:** Servicio Social — Tlatlauquitepec, Puebla
+
+---
+
+## Descripción técnica
+
+- **Lenguaje y framework:** Dart 3.10+ y Flutter (Material 3), aplicación de escritorio.
+- **Arquitectura:** separación en `modelos`, `controladores`, `servicios` y `vistas`.
+  - `modelos/`: entidades serializables (activos, configuración temporal, ingresos, costos,
+    estructura de capital).
+  - `controladores/proveedor_simulador.dart`: estado global con `provider` y `ChangeNotifier`.
+  - `servicios/`: `motor_fen` (flujos de caja), `evaluador_financiero` (VPN, TIR, payback, B/C)
+    y `reporte_pdf` (reporte y autoguardado).
+  - `vistas/`: `DisenoEscritorio` con tres pestañas y las secciones de Inversión.
+- **Persistencia:** SQLite local mediante `sqflite_common_ffi` (versión de esquema 4). Guarda el
+  historial de simulaciones y los proyectos completos en formato JSON dentro de la base.
+- **Dependencias principales:** `provider`, `sqflite_common_ffi`, `path`, `pdf`, `printing`,
+  `path_provider`. No se requieren servicios en la nube.
+- **Reportes:** PDF generado en el dispositivo y guardado automáticamente en la carpeta de
+  Documentos del usuario.
+- **Operación:** 100 % local y sin conexión a internet.
 
 ---
 
 ## Índice
 
 1. [Introducción](#1-introducción)
-2. [Requisitos del Sistema](#2-requisitos-del-sistema)
-3. [Instalación y Ejecución](#3-instalación-y-ejecución)
-4. [Flujo de Trabajo General](#4-flujo-de-trabajo-general)
-5. [Descripción Detallada de Cada Paso](#5-descripción-detallada-de-cada-paso)
-6. [Interpretación de Resultados](#6-interpretación-de-resultados)
-7. [Exportación a PDF](#7-exportación-a-pdf)
-8. [Preguntas Frecuentes](#8-preguntas-frecuentes)
-9. [Soporte Técnico](#9-soporte-técnico)
+2. [Requisitos](#2-requisitos)
+3. [Instalación y ejecución](#3-instalación-y-ejecución)
+4. [Interfaz general](#4-interfaz-general)
+5. [Sin valores predeterminados](#5-sin-valores-predeterminados)
+6. [Pasos de la pestaña Inversión](#6-pasos-de-la-pestaña-inversión)
+7. [Fórmulas financieras](#7-fórmulas-financieras)
+8. [Interpretación de resultados](#8-interpretación-de-resultados)
+9. [Exportación de PDF y documentos](#9-exportación-de-pdf-y-documentos)
+10. [Guardar y abrir proyectos](#10-guardar-y-abrir-proyectos)
+11. [Preguntas frecuentes](#11-preguntas-frecuentes)
+12. [Limitaciones conocidas](#12-limitaciones-conocidas)
+13. [Soporte](#13-soporte)
 
 ---
 
 ## 1. Introducción
 
-El **Simulador Financiero para Sistemas de Riego** es una aplicación de escritorio diseñada para evaluar la viabilidad económica de proyectos de inversión en infraestructura de riego agrícola. Permite al usuario:
+El **Simulador Financiero para Sistemas de Riego por Goteo** evalúa la viabilidad económica de
+proyectos de riego con sensores en microparcelas de hortalizas. Permite capturar los datos del
+proyecto, calcular sus flujos de caja y obtener indicadores financieros, así como guardar proyectos
+y generar reportes PDF.
 
-- **Calcular la Inversión Requerida** mediante la definición de activos (bombas, tuberías, automatización, terreno, etc.)
-- **Estructurar el Financiamiento** combinando capital propio y deuda bancaria
-- **Proyectar Ingresos** basados en precios y demandas por periodo
-- **Estimar Costos Variables** (materia prima, mano de obra, cargos indirectos) con inflación compuesta
-- **Definir Costos Fijos** (sueldos, rentas, seguros) con inflación opcional
-- **Evaluar Rentabilidad** mediante VPN, TIR, Payback, B/C y análisis de sensibilidad
-- **Generar Reportes PDF** profesionales para presentación y registro
-
-### Fundamento Metodológico
-
-La evaluación se basa en **Flujo de Caja Libre (FCL)** descontado a la **TREMA** (Tasa Mínima de Rentabilidad Esperada), considerando:
-- Horizonte temporal configurable (periodos de duración variable en meses)
-- Inflación compuesta en costos variables y fijos (opcional)
-- Amortización de deuda bajo **Sistema Francés** (cuotas fijas)
-- Valor residual de activos (10% por defecto)
-- Horizonte de evaluación = min(solicitado, configuración temporal)
+El simulador **no sustituye** un estudio financiero profesional: sus resultados dependen
+directamente de los datos que capture el usuario.
 
 ---
 
-## 2. Requisitos del Sistema
+## 2. Requisitos
 
-| Componente | Requisito Mínimo |
-|------------|------------------|
-| **Sistema Operativo** | Windows 10/11, macOS 12+, Ubuntu 20.04+ |
-| **Memoria RAM** | 4 GB (8 GB recomendado) |
-| **Espacio en Disco** | 500 MB |
-| **Resolución** | 1366 × 768 mínimo (1920 × 1080 recomendado) |
-| **Permisos** | Escritura en directorio de usuario (para base de datos SQLite) |
+| Componente | Requisito |
+|---|---|
+| Sistema operativo | Windows 10/11, macOS 12+ o Linux de escritorio |
+| Flutter SDK | 3.10 o superior |
+| Memoria RAM | 4 GB (8 GB recomendado) |
+| Espacio en disco | 500 MB |
+| Resolución | 1366 × 768 mínimo |
+| Permisos | Escritura en la carpeta del usuario (SQLite y PDF) |
 
 ---
 
-## 3. Instalación y Ejecución
+## 3. Instalación y ejecución
 
-### Opción A: Ejecutable Portable (Recomendado)
-```bash
-# Descargar simuladorfinanciero.exe y ejecutar directamente
-# No requiere instalación adicional
-```
+### Desde código fuente
 
-### Opción B: Desde Código Fuente (Desarrolladores)
 ```bash
-# Prerrequisitos: Flutter SDK 3.10+
 git clone https://github.com/rigo1012/simuladorfinanciero.git
 cd simuladorfinanciero
 flutter pub get
-flutter run -d windows    # Debug con hot reload
-flutter build windows --release  # Generar .exe optimizado
+flutter run -d windows
 ```
 
-### Verificación de Instalación
-Al iniciar, la aplicación muestra el **Paso 0: Configuración Temporal**. Si ve esta pantalla, la instalación es correcta.
+Para generar la versión de escritorio:
 
----
-
-## 4. Flujo de Trabajo General
-
-La aplicación guía al usuario a través de **7 pasos secuenciales** (pestañas laterales):
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  0. ⚙️ CONFIGURACIÓN TEMPORAL    (Obligatorio)                 │
-├─────────────────────────────────────────────────────────────────┤
-│  1. 🏗️ ACTIVOS E INVERSIÓN        → Inversión Requerida       │
-├─────────────────────────────────────────────────────────────────┤
-│  2. 💰 FINANCIAMIENTO            → % Propio / % Deuda + Cuotas │
-├─────────────────────────────────────────────────────────────────┤
-│  3. 📈 INGRESOS ESTIMADOS        → Precio × Demanda / Periodo  │
-├─────────────────────────────────────────────────────────────────┤
-│  4. 📊 COSTOS VARIABLES          → 3 Categorías + Inflación    │
-├─────────────────────────────────────────────────────────────────┤
-│  5. 📋 COSTOS FIJOS              → Items + Inflación Opcional  │
-├─────────────────────────────────────────────────────────────────┤
-│  6. 🎯 PARÁMETROS FINANCIEROS    → TREMA + Horizonte          │
-├─────────────────────────────────────────────────────────────────┤
-│  7. 📊 RESULTADOS                → VPN, TIR, Payback, B/C, PDF │
-└─────────────────────────────────────────────────────────────────┘
+```bash
+flutter build windows --release
 ```
 
-**Regla de Oro**: No puede avanzar al siguiente paso hasta completar el actual. El botón **"Calcular Rentabilidad"** solo se habilita cuando todos los pasos 0-5 están completos.
+El ejecutable queda en `build/windows/x64/runner/Release/`. No se distribuye un ejecutable portable
+en este repositorio; debe generarse con el comando anterior.
+
+### Verificación
+
+Al iniciar se muestra la pestaña **Inversión** con la sección **Configuración Temporal Inicial**.
+Si los campos aparecen vacíos, la instalación es correcta (el simulador no precarga datos).
 
 ---
 
-## 5. Descripción Detallada de Cada Paso
+## 4. Interfaz general
 
-### 📋 Paso 0: Configuración Temporal (Obligatorio)
+La aplicación tiene **tres pestañas** en la barra lateral (o inferior en ventanas angostas):
 
-Define la **granularidad temporal** y el **horizonte** del proyecto.
+1. **Inversión**: contiene los pasos 0 a 6 del proyecto.
+2. **Dashboard**: historial de simulaciones y proyectos guardados.
+3. **Resultados**: indicadores, tablas detalladas y exportación a PDF.
 
-| Campo | Descripción | Valor Típico |
-|-------|-------------|--------------|
-| **Meses por Periodo** | Duración de cada periodo en meses (libre) | 3 (trimestral), 6 (semestral) |
-| **Años de Proyección** | Horizonte total del proyecto en años | 5 años (estándar infraestructura) |
-| **Ciclos por Año** | Número de ciclos productivos anuales | 2 (clima templado), 3 (trópico) |
+Los pasos **0 a 6 no son pestañas**: son secciones consecutivas dentro de la pestaña Inversión.
 
-**Ejemplo**: `3 meses/periodo × 5 años × 2 ciclos/año = 20 periodos totales`
+```
+Inversión (pestaña)
+├── Paso 0. Configuración Temporal
+├── Paso 1. Activos e Inversión
+├── Paso 2. Estructura de Financiamiento
+├── Paso 3. Ingresos Estimados
+├── Paso 4. Costos Variables
+├── Paso 5. Costos Fijos
+└── Paso 6. Parámetros de Evaluación
 
-> **Botón "Guardar y Continuar"** → Valida y habilita Paso 1  
-> **Botón "Cambiar"** (después de guardar) → Reinicia **TODOS** los datos posteriores
+Dashboard (pestaña)
+├── Historial de Simulaciones
+└── Proyectos guardados
 
----
+Resultados (pestaña)
+├── Resumen ejecutivo y KPIs
+├── Flujo de caja, amortización, KPIs y sensibilidad
+└── Documentos y exportación
+```
 
-### 🏗️ Paso 1: Activos e Inversión
-
-Define los **componentes físicos** del sistema de riego. El sistema calcula **automáticamente** el costo total por fila (`Unidades × Costo Unitario`) y la **suma total = Inversión Requerida**.
-
-| Columna | Descripción | Ejemplo |
-|---------|-------------|---------|
-| **Nombre del Activo** | Descripción libre | "Bomba centrífuga 50 HP" |
-| **Unidades** | Cantidad necesaria (entero ≥ 1) | 2 |
-| **Costo Unitario** | Precio por unidad | $150,000 |
-
-**Funciones**:
-- ➕ **Agregar Activo** → Diálogo con validación
-- ✏️ **Editar** (icono lápiz) → Modifica valores inline
-- 🗑️ **Eliminar** (icono basura) → Confirma antes de borrar
-- **Chip "Inversión Requerida"** → Muestra suma total en tiempo real (ej: $1,695,000)
-
-> **Importante**: El costo total por fila **NO se muestra al usuario** (requisito de confidencialidad), solo la suma final.
+Las secciones son visibles siempre. Si falta un dato de un paso anterior, el cálculo muestra un
+mensaje de error al intentar simular; no se bloquea la navegación.
 
 ---
 
-### 💰 Paso 2: Estructura de Financiamiento
+## 5. Sin valores predeterminados
 
-Define cómo se financia la **Inversión Requerida** del Paso 1.
+Por indicación del asesor del proyecto, **ningún dato financiero, agronómico o de configuración
+viene precargado**. Todos los campos inician vacíos y el usuario debe capturarlos.
 
-| Campo | Descripción | Validación |
-|-------|-------------|------------|
-| **% Capital Propio** | Porcentaje aportado por el inversionista | 0-100% |
-| **% Financiamiento/Deuda** | Porcentaje financiado con deuda bancaria | 100% - % Propio |
-| **Tasa Interés Anual** | Tasa nominal del crédito bancario | > 0% (solo si Deuda > 0%) |
-| **Plazo del Crédito (meses)** | Duración del préstamo | 1-360 meses (solo si Deuda > 0%) |
+Antes de calcular, son obligatorios:
 
-**Cálculos Automáticos**:
-- **Monto Préstamo** = Inversión × %Deuda/100
-- **Aporte Propio** = Inversión × %Propio/100
-- **Cuota Mensual** = Sistema Francés: `P × [i(1+i)^n]/[(1+i)^n-1]`
+- **Paso 0:** meses por periodo, años de proyección y ciclos por año.
+- **Paso 1:** al menos un activo, con la decisión explícita de si es **depreciable**; si lo es,
+  su **vida útil en años** (> 0).
+- **Paso 2:** porcentaje de capital propio y de deuda que sumen 100 %. Si hay deuda, tasa de
+  interés anual y plazo en meses.
+- **Paso 3:** todos los periodos con precio > 0 y demanda > 0.
+- **Paso 4:** al menos un ítem de costo variable en cada periodo.
+- **Paso 5:** al menos un ítem de costo fijo en cada periodo.
+- **Paso 6:** TREMA, horizonte de evaluación, **tasa de impuesto (ISR)** y **valor residual (%)**.
 
-**Tabla de Amortización Preview**: Muestra por periodo: Cuota Total, Interés (P&G), Capital (Flujo Caja), Saldo Final.
-
-> **Botón "Guardar y Continuar"** → Habilita Paso 3  
-> **Botón "Cambiar"** → Reinicia Ingresos, Costos Variables, Costos Fijos y Resultados
-
----
-
-### 📈 Paso 3: Ingresos Estimados
-
-Proyecta los **ingresos por periodo** basados en precio y demanda.
-
-| Columna | Fórmula | Ejemplo |
-|---------|---------|---------|
-| **Periodo** | 1, 2, 3... N (automático) | 1 |
-| **Precio Unitario** | $/unidad de producto | $12.50 |
-| **Demanda** | Unidades vendidas/periodo | 8,000 |
-| **Ingreso** | = Precio × Demanda (auto) | $100,000 |
-
-**Funciones**:
-- ✏️ **Editar por fila** → Modifica Precio/Demanda, Ingreso se recalcula
-- 🔄 **"Llenar con Patrón"** → Genera serie con crecimiento compuesto:
-  - Precio base + % crecimiento/periodo
-  - Demanda base + % crecimiento/periodo
-- 🗑️ **"Limpiar Todo"** → Reinicia todos los periodos
-- **Resumen**: Total Ingresos, Promedio Precio, Total Demanda
-
-> **Validación**: Todos los periodos deben tener Precio > 0 y Demanda > 0 para habilitar cálculo.
+Un valor `0` solo es válido si el usuario lo escribe expresamente (por ejemplo, ISR 0 % o valor
+residual 0 %).
 
 ---
 
-### 📊 Paso 4: Costos Variables
+## 6. Pasos de la pestaña Inversión
 
-Costos que **varían proporcionalmente** a la producción. 3 categorías con **inflación compuesta**.
+### Paso 0 — Configuración Temporal
 
-#### Inflación Global
-- **Inflación Anual %** → Factor por periodo: `(1 + i)^(meses/12)`
-- **Preview** muestra factor por periodo: `P1: 1.0000, P2: 1.0123, P3: 1.0247...`
-
-#### 3 Sub-categorías (pestañas)
-
-| Categoría | Campos | Fórmula Costo |
-|-----------|--------|---------------|
-| **Materia Prima** | Nombre, Cant. Unitaria, Costo Unit. | `Cantidad × Costo Unit.` |
-| **Mano de Obra** | Operación, Costo/Operación | `Costo/Operación` |
-| **Cargos Indirectos** | Recurso, Cantidad, Costo Unit. | `Cantidad × Costo Unit.` |
-
-**Por Periodo (ExpansionTile)**:
-- Lista items de esa categoría
-- **Subtotal Base** (sin inflación)
-- **Subtotal c/ Inflación** = Base × Factor Inflación
-- ➕ **Agregar Item** → Diálogo contextual por categoría
-
-**Tabla Resumen** (al final):
-| Periodo | Materia Prima | Mano Obra | Cargos Ind. | Total Base | Factor Inf. | Total c/Inf. |
-
-> **Botón "Limpiar Todo"** → Elimina todos los items de todas las categorías y periodos.
-
----
-
-### 📋 Paso 5: Costos Fijos
-
-Costos **independientes del volumen** de producción (sueldos, rentas, seguros).
+Define la duración de cada periodo y el horizonte del proyecto.
 
 | Campo | Descripción |
-|-------|-------------|
-| **Nombre** | "Sueldo Gerente", "Renta Bodega", "Seguro" |
-| **Monto/Periodo** | Valor base por periodo |
-| **Aplicar Inflación** | Toggle (default: OFF) |
+|---|---|
+| Duración del Periodo (meses) | Meses que abarca cada periodo (1 a 60) |
+| Años de Proyección Fiscal | Horizonte total del proyecto (1 a 20 años) |
+| Cosechas / Ciclos por Año | Número de ciclos productivos anuales (1 a 12) |
 
-**Inflación Opcional**: Si toggle = ON, aplica inflación global de referencia del Paso 4.
+- **Total de periodos** = `(años × 12) ÷ meses por periodo`.
+- El resumen del horizonte aparece solo cuando los tres campos tienen datos válidos.
+- No existen configuraciones rápidas ni valores sugeridos.
 
-**Por Periodo (ExpansionTile)**:
-- Items con costo base y costo c/inflación
-- ➕ **Agregar** → Diálogo simple (Nombre, Monto, Toggle Inflación)
-- 📝 **Editar/Eliminar** → Menú contextual (⋮)
+### Paso 1 — Activos e Inversión
 
-**Resumen Totales**: Total Base, Total c/Inflación, Promedio/Periodo
+Cada activo se captura con:
+
+| Campo | Descripción |
+|---|---|
+| Nombre | Texto libre (sin catálogo) |
+| Unidades | Entero ≥ 1 |
+| Costo Unitario | Importe por unidad |
+| ¿Depreciable? | Elección explícita Sí / No (sin preselección) |
+| Vida útil (años) | Obligatoria solo si es depreciable; > 0 |
+
+- **Inversión Requerida** = suma de `unidades × costo unitario` de todos los activos.
+- El costo total por activo no se muestra; solo la inversión requerida.
+- Los activos no depreciables (por ejemplo, terreno) conservan el 100 % de su costo como valor
+  residual.
+- El cálculo exige que cada activo tenga definida la condición de depreciable.
+
+### Paso 2 — Estructura de Financiamiento
+
+| Campo | Descripción |
+|---|---|
+| Capital Propio (%) | 0 a 100 |
+| Financiamiento / Deuda (%) | 0 a 100; debe sumar 100 % con el capital propio |
+| Tasa de Interés Anual (%) | Obligatoria solo si hay deuda |
+| Plazo del Crédito (meses) | Obligatorio solo si hay deuda; 1 a 360 |
+
+- **Monto del préstamo** = inversión requerida × % deuda.
+- **Aporte propio** = inversión requerida × % capital propio.
+- **Cuota mensual** por Sistema Francés.
+- Si el proyecto es 100 % capital propio, los campos de tasa y plazo no bloquean el guardado.
+- La previsualización del crédito se actualiza en tiempo real al escribir la tasa y el plazo.
+
+### Paso 3 — Ingresos Estimados
+
+Cada periodo requiere precio unitario y demanda. El ingreso se calcula automáticamente:
+
+```
+Ingreso del periodo = Precio × Demanda + Otros ingresos
+```
+
+Herramientas disponibles:
+
+1. **Calculadora de Beneficios** (recomendada para el proyecto agrícola). Solicita, sin valores
+   precargados:
+   - Superficie (m²)
+   - Cultivo (texto libre)
+   - Rendimiento SIN riego y CON riego (kg/m² por ciclo)
+   - Precio por kg
+   - Ciclos por año
+   - Ahorro de agua (m³ por ciclo)
+   - Costo del agua ($/m³)
+
+   Calcula:
+   - kg incrementales por ciclo = `(rendimiento con riego − rendimiento sin riego) × superficie`
+   - ciclos por periodo = `ciclos por año × meses por periodo ÷ 12`
+   - demanda del periodo = kg incrementales × ciclos por periodo
+   - otros ingresos = ahorro de agua del periodo × costo del agua
+
+   Muestra un resumen antes de aplicar y llena todos los periodos. Después, cada fila puede
+   editarse manualmente.
+
+2. **Llenar con Patrón**: genera una serie con crecimiento compuesto. Sus campos también inician
+   vacíos y son obligatorios.
+
+3. **Limpiar Todo**: elimina los ingresos capturados.
+
+- Los periodos se muestran de forma progresiva con el botón **“Agregar Periodo X”**.
+- El resumen (total de ingresos, precio promedio y demanda total) considera los periodos capturados.
+
+### Paso 4 — Costos Variables
+
+Tres categorías: **Materia Prima**, **Mano de Obra** y **Cargos Indirectos**.
+
+| Categoría | Campos |
+|---|---|
+| Materia Prima | Nombre, cantidad unitaria, costo unitario |
+| Mano de Obra | Nombre de la operación, costo por operación |
+| Cargos Indirectos | Recurso, cantidad, costo unitario |
+
+- La inflación anual inicia **vacía** y es capturada por el usuario; se aplica de forma compuesta:
+  `costo × (1 + i)^(meses/12 × (periodo − 1))`.
+- Los periodos se revelan con **“Agregar Periodo X”**.
+- Cada periodo requiere al menos un ítem para poder calcular.
+
+### Paso 5 — Costos Fijos
+
+| Campo | Descripción |
+|---|---|
+| Nombre | Texto libre |
+| Monto por periodo | Importe base |
+| Aplicar inflación | Sí / No por ítem |
+
+- La inflación de referencia inicia **vacía** y se captura en la sección.
+- Los periodos se revelan con **“Agregar Periodo X”**.
+- Cada periodo requiere al menos un ítem.
+
+### Paso 6 — Parámetros de Evaluación
+
+| Campo | Descripción |
+|---|---|
+| Tasa de Descuento — TREMA (%) | Rentabilidad mínima esperada, anual |
+| Horizonte de Evaluación (años) | Debe ser ≤ años de proyección |
+| Tasa de Impuesto — ISR (%) | Impuesto sobre la renta aplicable |
+| Valor Residual de Activos Depreciables (%) | Porcentaje recuperado al final |
+
+Todos los campos inician vacíos y son obligatorios.
+
+El botón **“Calcular Rentabilidad”** ejecuta la simulación y muestra los resultados en la pestaña
+Resultados. El botón **“Guardar proyecto”** (cabecera de Inversión) guarda todo el proyecto.
 
 ---
 
-### 🎯 Paso 6: Parámetros Financieros
+## 7. Fórmulas financieras
 
-| Parámetro | Descripción | Validación |
-|-----------|-------------|------------|
-| **TREMA** | Tasa Mínima de Rentabilidad Esperada (% anual) | 0.01% - 100% |
-| **Horizonte Evaluación** | Años a evaluar (≤ Años Proyección Paso 0) | 1 - Años Proyección |
+Sea `m` = meses por periodo, `N` = periodos del horizonte y `TREMA` la tasa anual en decimal.
 
-> **Botón "Calcular Rentabilidad"** → Ejecuta Motor FEN + Evaluador → Abre pestaña **Resultados**
+### Tasa de descuento del periodo
 
----
+```
+r = (1 + TREMA)^(m / 12) − 1
+```
 
-### 📊 Paso 7: Resultados
+### VPN
 
-Dashboard completo con **4 pestañas**:
+```
+VPN = Σ (F_t / (1 + r)^t),  t = 0..N
+```
 
-#### 1. Resumen Ejecutivo (Tarjeta Principal)
-- **Veredicto**: ✅ VIABLE / ❌ NO VIABLE (basado en VPN > 0)
-- **VPN**: Valor Presente Neto a TREMA
-- **TIR**: Tasa Interna de Retorno (%)
-- **Payback**: Periodos para recuperar inversión
-- **B/C**: Relación Beneficio/Costo
+donde `F_0 = −aporte propio` y `F_t` es el flujo de caja libre del periodo `t`.
 
-#### 2. KPIs Grid (12 indicadores)
-| Financieros | Operativos |
-|-------------|------------|
-| VPN / VPN Operativo | ROI Inversión / ROI Aporte |
-| TIR / TIR Operativa | Margen EBITDA / Margen Neto |
-| Payback / Payback Desc. | |
-| B/C / B/C Operativo | |
+### TIR
 
-#### 3. Pestañas de Detalle
-| Pestaña | Contenido |
-|---------|-----------|
-| **Flujo de Caja** | Tabla 12 columnas: Per, Mes, Ingresos, Cost. Var., Cost. Fix, EBITDA, Intereses, UAI, Amort. Cap., Liq. Saldo, Val. Res., FLUJO CAJA |
-| **Amortización** | Tabla por periodo: Cuotas, Interés (P&G), Capital (Flujo), Saldo Final |
-| **KPIs Detalle** | Lista expandible de todos los KPIs calculados |
-| **Sensibilidad** | VPN vs TREMA (5 puntos: 50%, 75%, 100%, 125%, 150%) |
+Se resuelve `VPN = 0` para la tasa por periodo con Newton-Raphson y, si no converge, con bisección
+en `[−0.99, 10]`. La TIR que se muestra es **anual efectiva**:
 
-#### 4. Acciones
-| Botón | Acción |
-|-------|--------|
-| 📄 **Exportar PDF** | Genera reporte profesional completo |
-| 🔄 **Recalcular** | Re-ejecuta simulación con parámetros guardados |
+```
+TIR_anual = (1 + TIR_periodo)^(12 / m) − 1
+```
 
----
+### Depreciación e ISR
 
-## 6. Interpretación de Resultados
+Para cada activo depreciable, durante su vida útil:
 
-### Veredicto Principal
-| Resultado | Significado | Acción |
-|-----------|-------------|--------|
-| **VIABLE** (VPN > 0) | Genera valor > costo de oportunidad | Proceder / Presentar a inversionistas |
-| **NO VIABLE** (VPN ≤ 0) | No cubre costo de oportunidad | Revisar supuestos / No invertir |
+```
+depreciación_periodo = costo_total / (vida_útil_años × 12 / m)
+UAI = EBITDA − intereses
+ISR = max(0, UAI − depreciación) × tasa_ISR
+```
 
-### Indicadores Clave
-| Indicador | Fórmula | Interpretación |
-|-----------|---------|----------------|
-| **VPN** | Σ Flujo_t / (1+TREMA)^t | Valor absoluto creado/destruido |
-| **TIR** | Tasa que hace VPN = 0 | Rentabilidad intrínseca del proyecto |
-| **Payback** | Periodos para VPN acumulado ≥ 0 | Liquidez / riesgo temporal |
-| **B/C** | PV(Beneficios) / PV(Costos) | > 1 = beneficios superan costos |
-| **ROI Aporte** | VPN / Aporte Propio | Rentabilidad del capital propio |
+### Flujo de caja libre
 
-### Análisis de Sensibilidad
-Muestra **VPN vs TREMA** en 5 puntos (50%, 75%, 100%, 125%, 150% de TREMA base).  
-**Punto de inflexión** (VPN = 0) ≈ **TIR del proyecto**.
+```
+Flujo de caja = UAI − ISR − amortización de capital − liquidación de saldo + valor residual
+```
 
----
+El flujo operativo (sin financiamiento) es:
 
-## 7. Exportación a PDF
+```
+Flujo operativo = EBITDA − ISR_operativo
+ISR_operativo = max(0, EBITDA − depreciación) × tasa_ISR
+```
 
-El reporte PDF incluye:
+### Valor residual
 
-1. **Portada**: Título, proyecto, fecha, usuario
-2. **Resumen Ejecutivo**: Veredicto, VPN, TIR, Payback, B/C, ROI
-3. **Configuración del Proyecto**: Parámetros temporales
-4. **Estructura de Capital**: Inversión, % Propio/Deuda, cuotas, intereses
-5. **Indicadores Financieros**: 20+ KPIs en tabla
-6. **Flujo de Caja Detallado**: Tabla 12 columnas × N periodos
-7. **Tabla de Amortización**: Por periodos del proyecto
-8. **Análisis de Sensibilidad**: VPN vs TREMA (gráfico tabular)
+Solo en el último periodo del horizonte:
 
-**Generación**: Botón **"Exportar PDF"** → Diálogo "Guardar como" → Abre automáticamente.
+```
+Valor residual = Σ(costo de activos depreciables) × %valor_residual
+               + Σ(costo de activos no depreciables) × 100 %
+```
+
+### Relación Beneficio/Costo
+
+```
+B/C = VP(ingresos + valor residual) /
+      (inversión inicial + VP(costos variables + costos fijos + impuestos [+ intereses]))
+```
+
+La versión operativa excluye los intereses y usa el ISR operativo.
+
+### Payback
+
+- **Payback simple**: primer periodo en que el flujo acumulado ≥ 0.
+- **Payback descontado**: primer periodo en que el VPN acumulado ≥ 0.
+- Ambos se reportan en periodos y en **años**, con interpolación lineal dentro del periodo de
+  recuperación: `años = periodos × m / 12`.
+
+### Análisis de sensibilidad
+
+El reporte PDF compara el VPN con variaciones de la TREMA anual (50 %, 75 %, 100 %, 125 % y 150 %),
+convirtiendo cada tasa anual a su equivalente por periodo.
 
 ---
 
-## 8. Preguntas Frecuentes (FAQ)
+## 8. Interpretación de resultados
 
-### General
+| Indicador | Lectura |
+|---|---|
+| VPN > 0 | El proyecto crea valor a la TREMA exigida (VIABLE) |
+| VPN ≤ 0 | No cubre la TREMA exigida (NO VIABLE) |
+| TIR anual efectiva | Rentabilidad anual del proyecto comparable con la TREMA |
+| B/C > 1 | Los beneficios descontados superan los costos descontados |
+| Payback | Tiempo necesario para recuperar la inversión |
+
+El veredicto se basa en el VPN. Los demás indicadores contextualizan el resultado.
+
+---
+
+## 9. Exportación de PDF y documentos
+
+### Autoguardado
+
+Al calcular una simulación, el PDF se genera y se guarda **automáticamente** en la carpeta de
+Documentos del usuario, sin intervención adicional:
+
+```
+Documentos/Evaluacion_Sistema_de_Riego_AAAA-MM-DD_HHMMSS.pdf
+```
+
+Se muestra un aviso con la ruta absoluta del archivo guardado.
+
+### Botón “Exportar PDF”
+
+Vuelve a generar el PDF, lo guarda y abre el diálogo de impresión o compartición del sistema.
+
+### Botón “Documentos”
+
+En la cabecera de Resultados abre la lista de PDF generados, con opciones para abrir cada archivo
+o la carpeta de Documentos.
+
+El PDF incluye: resumen ejecutivo, configuración del proyecto, estructura de capital, indicadores,
+flujo de caja detallado (con depreciación e impuestos), tabla de amortización y análisis de
+sensibilidad.
+
+---
+
+## 10. Guardar y abrir proyectos
+
+### Guardar
+
+En la cabecera de la pestaña Inversión, el botón **“Guardar proyecto”** solicita un nombre y
+guarda el estado completo: configuración temporal, activos, financiamiento, ingresos, costos
+variables, costos fijos, inflación, TREMA, horizonte, ISR y valor residual.
+
+### Abrir
+
+En la pestaña **Dashboard**, la sección **“Proyectos guardados”** lista los proyectos con nombre y
+fecha:
+
+- **Abrir**: carga el proyecto y reconstruye la aplicación.
+- **Eliminar**: solicita confirmación antes de borrar.
+
+Los proyectos se almacenan en la base de datos SQLite local. No existe importación ni exportación a
+archivos `.json` externos en esta versión.
+
+### Historial
+
+El Dashboard también muestra el historial de simulaciones ejecutadas (inversión, tasa y años).
+
+---
+
+## 11. Preguntas frecuentes
+
 | Pregunta | Respuesta |
-|----------|-----------|
-| **¿Se guardan los datos al cerrar?** | Sí, en base de datos SQLite local (`simulador_riego.db`) |
-| **¿Puedo tener múltiples proyectos?** | Cada simulación se guarda en historial con fecha/hora |
-| **¿Puedo modificar un paso anterior?** | Sí, botón "Cambiar" en resúmenes, pero borra datos posteriores |
-| **¿Funciona sin internet?** | Sí, 100% offline |
-
-### Cálculos
-| Pregunta | Respuesta |
-|----------|-----------|
-| **¿Por qué mi TIR es "N/A"?** | El algoritmo no converge (flujos no cambian signo o proyecto no viable) |
-| **¿Por qué Payback = "No recupera"?** | Flujo acumulado nunca llega a cero en el horizonte |
-| **¿Inflación en costos fijos?** | Solo si activas el toggle por item (default: OFF) |
-| **Valor residual** | 10% de Inversión Requerida en último periodo (configurable en código) |
-
-### Errores Comunes
-| Error | Solución |
-|-------|----------|
-| "Falta configuración temporal" | Completa Paso 0 primero |
-| "Agregue al menos un activo" | Paso 1 requiere ≥1 activo |
-| "Complete ingresos (20 periodos)" | Paso 3: todos los periodos con Precio>0 y Demanda>0 |
-| "Complete costos variables" | Paso 4: ≥1 item en cada periodo |
-| "Complete costos fijos" | Paso 5: ≥1 item en cada periodo |
+|---|---|
+| ¿Los datos se guardan solos? | Solo al usar “Guardar proyecto”. El historial de simulaciones sí se registra al calcular. |
+| ¿Puedo tener varios proyectos? | Sí, en “Proyectos guardados”. |
+| ¿Puedo modificar un paso anterior? | Sí; si cambias la configuración temporal o el financiamiento, se reinician los datos dependientes. |
+| ¿Funciona sin internet? | Sí, es 100 % local. |
+| ¿Por qué la TIR es “N/A”? | El proyecto no tiene cambio de signo en sus flujos o no hay solución en el rango evaluado. |
+| ¿Por qué el payback dice “No recupera”? | El flujo acumulado no alcanza cero dentro del horizonte. |
+| ¿Cómo se calcula el valor residual? | El usuario define el porcentaje para activos depreciables; los no depreciables valen 100 %. |
+| ¿Puedo poner ISR 0 %? | Sí, si el usuario lo escribe expresamente. |
+| ¿El PDF se guarda solo? | Sí, al calcular la simulación; también puede regenerarse con “Exportar PDF”. |
 
 ---
 
-## 9. Soporte Técnico
+## 12. Limitaciones conocidas
 
-### Logs y Depuración
-- **Logs**: Consola de Flutter DevTools (`http://127.0.0.1:XXXX/`)
-- **Base de Datos**: `%APPDATA%/simuladorfinanciero/simulador_riego.db`
-- **Errores Comunes**: Revisar consola al hacer "Calcular Rentabilidad"
-
-### Reportar Bugs
-Incluir en el reporte:
-1. Pasos para reproducir
-2. Datos de entrada (capturas de cada paso)
-3. Mensaje de error exacto
-4. Versión de la app (About → Version)
-
-### Contacto
-- **Repositorio**: https://github.com/rigo1012/simuladorfinanciero
-- **Issues**: GitHub Issues para bugs y feature requests
-
----
-
-## Anexo: Atajos de Teclado
-
-| Acción | Windows/Linux | macOS |
-|--------|---------------|-------|
-| Guardar formulario | `Enter` (en último campo) | `Enter` |
-| Cambiar pestaña | `Ctrl+1/2/3...` | `Cmd+1/2/3...` |
-| Recalcular | `F5` | `Cmd+R` |
-| Exportar PDF | `Ctrl+P` | `Cmd+P` |
+- Solo se modela el **ISR**; no se incluyen otros impuestos, contribuciones ni retenciones.
+- La depreciación es **lineal** por activo y no contempla depreciación acelerada ni fracciones de
+  año distintas a la vida útil capturada.
+- El financiamiento usa únicamente el **Sistema Francés** (cuota fija); no modela periodos de
+  gracia, comisiones ni seguros de crédito.
+- El valor residual es un **porcentaje definido por el usuario** sobre activos depreciables; no es
+  un avalúo de mercado.
+- La inflación se aplica a costos variables y fijos según lo capturado; no se aplica a ingresos ni
+  al financiamiento.
+- Solo se maneja una moneda; no hay tipo de cambio ni conversión.
+- Los periodos se expresan en meses enteros; el horizonte se redondea hacia abajo al número de
+  periodos completos.
+- No existe importación/exportación de proyectos a archivo `.json`; el almacenamiento es la base
+  SQLite local.
+- No hay atajos de teclado ni menú “Acerca de” implementados en esta versión.
+- Los resultados son estimaciones basadas en los datos capturados y no constituyen asesoría
+  financiera profesional.
 
 ---
 
-**Fin del Manual**  
-*Simulador Financiero v1.0 — Desarrollado para evaluación de proyectos de riego agrícola*
+## 13. Soporte
+
+- **Repositorio:** https://github.com/rigo1012/simuladorfinanciero
+- **Incidencias:** sección de Issues del repositorio
+- **Base de datos local:** `simulador_riego.db` en el directorio de bases de datos de la aplicación
+- **Reportes PDF:** carpeta de Documentos del usuario
+
+Al reportar un problema incluye: pasos para reproducirlo, datos capturados (capturas de pantalla),
+mensaje de error exacto y versión de la aplicación.
+
+---
+
+*Simulador Financiero para Sistemas de Riego por Goteo — ITST, 2026. Todos los derechos reservados.*
