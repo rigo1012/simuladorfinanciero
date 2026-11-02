@@ -452,23 +452,39 @@ El Dashboard también muestra el historial de simulaciones ejecutadas (inversió
 
 ## 12. Limitaciones conocidas
 
-- Solo se modela el **ISR**; no se incluyen otros impuestos, contribuciones ni retenciones.
-- La depreciación es **lineal** por activo y no contempla depreciación acelerada ni fracciones de
-  año distintas a la vida útil capturada.
-- El financiamiento usa únicamente el **Sistema Francés** (cuota fija); no modela periodos de
-  gracia, comisiones ni seguros de crédito.
-- El valor residual es un **porcentaje definido por el usuario** sobre activos depreciables; no es
-  un avalúo de mercado.
-- La inflación se aplica a costos variables y fijos según lo capturado; no se aplica a ingresos ni
-  al financiamiento.
-- Solo se maneja una moneda; no hay tipo de cambio ni conversión.
-- Los periodos se expresan en meses enteros; el horizonte se redondea hacia abajo al número de
-  periodos completos.
-- No existe importación/exportación de proyectos a archivo `.json`; el almacenamiento es la base
-  SQLite local.
-- No hay atajos de teclado ni menú “Acerca de” implementados en esta versión.
-- Los resultados son estimaciones basadas en los datos capturados y no constituyen asesoría
-  financiera profesional.
+> Las referencias `archivo:línea` corresponden a la versión actual del código.
+
+### Impuestos
+- **Solo se modela el ISR.** El impuesto se calcula como `max(0, UAI − depreciación) × tasa` (`lib/servicios/motor_fen.dart:264-269`) y el Paso 6 solo captura esa tasa (`lib/vistas/vista_formulario_inversion.dart:288-305`).
+- **IVA no modelado.** Los componentes del flujo (`ingreso`, `costoVariable`, `costoFijo`, `interes`, `amortizacionCapital`, `liquidacionSaldo`, `valorResidual`) no incluyen IVA acreditable ni trasladado (`lib/servicios/motor_fen.dart:8-30`); el B/C solo suma costos, impuestos e intereses (`lib/servicios/evaluador_financiero.dart:236`).
+- **No hay traslado de pérdidas fiscales.** Cada periodo calcula la base con `max(0, ...)`; una pérdida no se arrastra al siguiente periodo ni genera saldo a favor (`lib/servicios/motor_fen.dart:266-267`).
+- **No hay capital de trabajo.** No se modelan inventarios, cuentas por cobrar/pagar ni efectivo mínimo; el flujo solo contiene los componentes anteriores (`lib/servicios/motor_fen.dart:8-30`).
+
+### Depreciación y valor residual
+- **Depreciación lineal, sin aceleración ni prorrateo.** Se calcula `costoTotal / (vidaAños × 12 / mesesPorPeriodo)` y se aplica completa mientras `periodo <= vidaPeriodos` (`lib/servicios/motor_fen.dart:189-197`). No hay convención de medio año ni ajuste por altas o bajas a mitad de periodo.
+- **La depreciación usa el costo original.** No se revalúa el activo ni se ajusta por inflación (`lib/servicios/motor_fen.dart:189-197`).
+- **Vida útil no alineada al periodo deja un remanente sin depreciar.** Si `vidaAños × 12 / mesesPorPeriodo` no es entero, los periodos completos no suman el costo total del activo (`lib/servicios/motor_fen.dart:195-197`).
+- **El valor residual no es un avalúo.** Se aplica el porcentaje capturado solo a los activos depreciables y el **100 % del costo** a los no depreciables (`lib/servicios/motor_fen.dart:204-211`); se suma únicamente en el último periodo del horizonte (`lib/servicios/motor_fen.dart:272`). No hay valor de mercado, plusvalía ni actualización por inflación.
+- **La depreciación no es una salida de efectivo.** Solo reduce la base del ISR (`lib/servicios/motor_fen.dart:266-267`); no se acumula un fondo de reposición de activos.
+
+### Financiamiento
+- **Solo Sistema Francés.** Cuota fija calculada como `P × [i(1+i)^n]/[(1+i)^n−1]` (`lib/modelos/estructura_capital.dart:44-50`). No hay periodos de gracia, comisiones, seguros ni otros costos del crédito.
+- **Tasa mensual nominal.** Se usa `tasaInteresAnual / 100 / 12` (`lib/modelos/estructura_capital.dart:40`), no una tasa mensual efectiva.
+- **Plazo mayor que el horizonte.** Si el crédito vence después del horizonte, el saldo insoluto se liquida en el último periodo evaluado (`lib/servicios/motor_fen.dart:255-259`; cálculo del saldo en `lib/controladores/proveedor_simulador.dart:205-208` y `lib/modelos/estructura_capital.dart:122-127`). No se agrega penalización ni interés adicional por esa liquidación.
+
+### Inflación, ingresos y TREMA
+- **Inflación solo en costos.** Se aplica a costos variables (`lib/modelos/costo_variable.dart:101-109`) y a costos fijos con toggle activado (`lib/modelos/costo_fijo.dart:87-93`); no al financiamiento. `IngresoPeriodo.ingreso` no tiene indexación (`lib/modelos/ingreso_periodo.dart:20`).
+- **Los ingresos no se inflan automáticamente, pero pueden capturarse con crecimiento.** “Llenar con Patrón” aplica un crecimiento porcentual por periodo (`lib/vistas/seccion_ingresos.dart:550-551, 603-604, 611-615`); la calculadora de beneficios genera un valor uniforme por periodo (`lib/vistas/seccion_ingresos.dart:315-318, 495-500`).
+- **Si se inflan costos, la TREMA debe ser nominal.** El descuento usa directamente la TREMA capturada convertida a tasa del periodo (`lib/servicios/motor_fen.dart:121`) mientras los costos se inflan; no hay conversión real↔nominal ni ecuación de Fisher.
+
+### Análisis y alcance
+- **Sensibilidad solo respecto a la TREMA.** El reporte varía la TREMA anual en cinco puntos y recalcula el VPN (`lib/servicios/reporte_pdf.dart:450-475`); no hay sensibilidad a precios, demanda, rendimientos ni costos.
+- **No hay modelo agronómico.** Los beneficios dependen de la superficie, los rendimientos, el precio y los ciclos capturados (`lib/vistas/seccion_ingresos.dart:288-318`); el sistema no modela clima, suelo, plagas, evapotranspiración ni respuesta del cultivo.
+- **Una sola moneda.** Los importes son `double` sin campo de moneda (`lib/modelos/activo.dart:10`, `lib/modelos/ingreso_periodo.dart:7`, `lib/modelos/estructura_capital.dart:12`); no hay tipo de cambio.
+- **Periodos en meses enteros y horizonte truncado.** `horizontePeriodos = floor(horizonteAños × 12 / mesesPorPeriodo)` (`lib/servicios/motor_fen.dart:178`).
+- **Proyectos solo en SQLite, sin archivo JSON externo.** El guardado y listado usan `guardarProyecto`/`listarProyectos` (`lib/nucleo/dbayuda.dart:80-92`); no hay importación/exportación de proyectos a archivos.
+- **Sin atajos de teclado ni menú “Acerca de”.** `MaterialApp` no define `shortcuts` y no existe `showAboutDialog` en el código (`lib/main.dart:55-59`).
+- **Los resultados son estimaciones.** Se calculan exclusivamente a partir de los datos capturados por el usuario (`lib/servicios/evaluador_financiero.dart:57`); no constituyen asesoría financiera profesional.
 
 ---
 
