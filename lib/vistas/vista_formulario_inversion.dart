@@ -21,8 +21,12 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   static const int _totalPasos = 7;
   final TextEditingController _tasaCtrl = TextEditingController();
   final TextEditingController _aniosCtrl = TextEditingController();
+  final TextEditingController _impuestoCtrl = TextEditingController();
+  final TextEditingController _residualCtrl = TextEditingController();
   final FocusNode _nodoTasa = FocusNode();
   final FocusNode _nodoAnios = FocusNode();
+  final FocusNode _nodoImpuesto = FocusNode();
+  final FocusNode _nodoResidual = FocusNode();
 
   void _enviarFormulario(ProveedorSimulador proveedor) {
     if (proveedor.estaCargando) return;
@@ -46,6 +50,11 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
 
     final tasa = double.parse(_tasaCtrl.text);
     final anios = int.parse(_aniosCtrl.text);
+    final impuesto = double.parse(_impuestoCtrl.text);
+    final residual = double.parse(_residualCtrl.text);
+
+    proveedor.setTasaImpuestoPct(impuesto);
+    proveedor.setValorResidualPct(residual);
 
     proveedor.procesarSimulacionSimple(tasa, anios);
   }
@@ -54,8 +63,12 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   void dispose() {
     _tasaCtrl.dispose();
     _aniosCtrl.dispose();
+    _impuestoCtrl.dispose();
+    _residualCtrl.dispose();
     _nodoTasa.dispose();
     _nodoAnios.dispose();
+    _nodoImpuesto.dispose();
+    _nodoResidual.dispose();
     super.dispose();
   }
 
@@ -157,8 +170,8 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                 TextFormField(
                   controller: _aniosCtrl,
                   focusNode: _nodoAnios,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => _enviarFormulario(context.read<ProveedorSimulador>()),
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_nodoImpuesto),
                   decoration: InputDecoration(
                     labelText: 'Horizonte de Evaluación (Años) *',
                     hintText: 'Ej: 5',
@@ -176,6 +189,58 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
                     if (numero <= 0) return 'El horizonte debe ser de al menos 1 año';
                     final maxAnos = proveedor.configTemporal?.anosProyeccion ?? 0;
                     if (numero > maxAnos) return 'No puede exceder los $maxAnos años de proyección';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Campo 3: Tasa de Impuesto (ISR)
+                TextFormField(
+                  controller: _impuestoCtrl,
+                  focusNode: _nodoImpuesto,
+                  textInputAction: TextInputAction.next,
+                  onFieldSubmitted: (_) => FocusScope.of(context).requestFocus(_nodoResidual),
+                  decoration: const InputDecoration(
+                    labelText: 'Tasa de Impuesto - ISR (%) *',
+                    hintText: 'Capture la tasa aplicable',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.receipt_long),
+                    helperText: 'Impuesto sobre la renta aplicable al proyecto',
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                  ],
+                  validator: (valor) {
+                    if (valor == null || valor.isEmpty) return 'Requerido';
+                    final numero = double.tryParse(valor);
+                    if (numero == null) return 'Número inválido';
+                    if (numero < 0 || numero > 100) return 'Debe estar entre 0 y 100';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 24),
+
+                // Campo 4: Valor Residual
+                TextFormField(
+                  controller: _residualCtrl,
+                  focusNode: _nodoResidual,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _enviarFormulario(context.read<ProveedorSimulador>()),
+                  decoration: const InputDecoration(
+                    labelText: 'Valor Residual de Activos Depreciables (%) *',
+                    hintText: 'Capture el porcentaje',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.recycling),
+                    helperText: 'Los activos no depreciables conservan el 100%',
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d*')),
+                  ],
+                  validator: (valor) {
+                    if (valor == null || valor.isEmpty) return 'Requerido';
+                    final numero = double.tryParse(valor);
+                    if (numero == null) return 'Número inválido';
+                    if (numero < 0 || numero > 100) return 'Debe estar entre 0 y 100';
                     return null;
                   },
                 ),

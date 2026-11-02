@@ -37,6 +37,15 @@ class ProveedorSimulador extends ChangeNotifier {
   double get inflacionGlobalFijos => _inflacionGlobalFijos;
   void setInflacionGlobalFijos(double v) { _inflacionGlobalFijos = v; notifyListeners(); }
 
+  // --- PARÁMETROS DE EVALUACIÓN (Paso 6) ---
+  // Nulos hasta que el usuario los capture explícitamente.
+  double? _tasaImpuestoPct;
+  double? _valorResidualPct;
+  double? get tasaImpuestoPct => _tasaImpuestoPct;
+  double? get valorResidualPct => _valorResidualPct;
+  void setTasaImpuestoPct(double? v) { _tasaImpuestoPct = v; notifyListeners(); }
+  void setValorResidualPct(double? v) { _valorResidualPct = v; notifyListeners(); }
+
   // --- ACTIVOS (Inversión Requerida) ---
   final List<Activo> _activos = [];
   InversionRequerida get inversionRequerida => InversionRequerida.fromActivos(_activos);
@@ -664,6 +673,39 @@ class ProveedorSimulador extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (tasaPct <= 0) {
+      _error = 'Capture la TREMA en el Paso 6';
+      notifyListeners();
+      return;
+    }
+    if (anios <= 0) {
+      _error = 'Capture el horizonte de evaluación en el Paso 6';
+      notifyListeners();
+      return;
+    }
+    if (_tasaImpuestoPct == null) {
+      _error = 'Capture la tasa de impuesto en el Paso 6';
+      notifyListeners();
+      return;
+    }
+    if (_valorResidualPct == null) {
+      _error = 'Capture el valor residual en el Paso 6';
+      notifyListeners();
+      return;
+    }
+    for (final activo in inversionRequerida.activos) {
+      if (activo.depreciable == null) {
+        _error = 'Defina si el activo "${activo.nombre}" es depreciable (Paso 1)';
+        notifyListeners();
+        return;
+      }
+      final vida = activo.vidaUtilAnios;
+      if (activo.depreciable == true && (vida == null || vida <= 0)) {
+        _error = 'Capture la vida útil del activo "${activo.nombre}" (Paso 1)';
+        notifyListeners();
+        return;
+      }
+    }
 
     _cargando = true;
     _error = null;
@@ -671,11 +713,14 @@ class ProveedorSimulador extends ChangeNotifier {
 
     try {
       // 1. Motor FEN: construye flujos de caja completos
+      final tasaImpuesto = _tasaImpuestoPct;
+      final residual = _valorResidualPct;
       final motor = MotorFEN.calcular(
         proveedor: this,
         tremaPct: tasaPct,
         horizonteAnios: anios,
-        valorResidualPct: 0.1, // 10% por defecto
+        valorResidualPct: (residual ?? 0) / 100,
+        tasaImpuestoPct: tasaImpuesto ?? 0,
       );
 
       // 2. Evaluador Financiero: calcula VPN, TIR, Payback, B/C, etc.

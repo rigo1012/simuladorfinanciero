@@ -19,7 +19,16 @@ class FlujoPeriodo {
   
   // Valor residual de activos (solo último periodo del horizonte)
   final double valorResidual;
-  
+
+  // Depreciación contable del periodo (solo para cálculo de impuesto)
+  final double depreciacion;
+
+  // Impuesto ISR del periodo (con financiamiento)
+  final double impuesto;
+
+  // Impuesto ISR operativo del periodo (sin intereses)
+  final double impuestoOperativo;
+
   // Inversión inicial (solo periodo 0)
   final double inversionInicial;
 
@@ -34,6 +43,9 @@ class FlujoPeriodo {
     required this.amortizacionCapital,
     this.liquidacionSaldo = 0,
     this.valorResidual = 0,
+    this.depreciacion = 0,
+    this.impuesto = 0,
+    this.impuestoOperativo = 0,
     this.inversionInicial = 0,
   });
 
@@ -43,18 +55,19 @@ class FlujoPeriodo {
   /// Utilidad Antes de Impuestos (UAI) = EBITDA - Intereses
   double get uai => ebitda - interes;
 
-  /// Flujo de Caja Libre (FEN) = UAI - Amortización Capital - Liquidación + Valor Residual
+  /// Flujo de Caja Libre (FEN) = UAI - Impuesto - Amortización Capital
+  /// - Liquidación + Valor Residual.
   /// Para periodo 0: retorna -inversionInicial (salida inicial de caja)
   double get flujoCaja {
     if (periodo == 0) return -inversionInicial;
-    return uai - amortizacionCapital - liquidacionSaldo + valorResidual;
+    return uai - impuesto - amortizacionCapital - liquidacionSaldo + valorResidual;
   }
 
-  /// Flujo de Caja Operativo (para VPN operativo) = EBITDA
+  /// Flujo de Caja Operativo (para VPN operativo) = EBITDA - Impuesto operativo.
   /// Para periodo 0: retorna -inversionInicial
   double get flujoOperativo {
     if (periodo == 0) return -inversionInicial;
-    return ebitda;
+    return ebitda - impuestoOperativo;
   }
 
   Map<String, dynamic> toMap() => {
@@ -67,6 +80,9 @@ class FlujoPeriodo {
     'ebitda': ebitda,
     'interes': interes,
     'uai': uai,
+    'depreciacion': depreciacion,
+    'impuesto': impuesto,
+    'impuesto_operativo': impuestoOperativo,
     'amortizacion_capital': amortizacionCapital,
     'liquidacion_saldo': liquidacionSaldo,
     'valor_residual': valorResidual,
@@ -84,7 +100,7 @@ class ResultadoMotorFEN {
   final double inversionRequerida;
   final double aportePropio;
   final double montoPrestamo;
-  final double valorResidualPct;        // % de inversión (default 10%)
+  final double valorResidualPct;        // % aplicado al costo de activos depreciables
   final double trema;                   // TREMA decimal (ej: 0.12)
   final int horizontePeriodos;          // Periodos a evaluar (≤ config.totalPeriodos)
 
@@ -131,7 +147,8 @@ class MotorFEN {
     required ProveedorSimulador proveedor,
     required double tremaPct,           // TREMA en porcentaje (ej: 12.5)
     required int horizonteAnios,        // Horizonte de evaluación en años
-    double valorResidualPct = 0.1,      // 10% por defecto
+    double valorResidualPct = 0,        // Fracción del costo depreciable (ej: 0.10)
+    double tasaImpuestoPct = 0,         // ISR en porcentaje (ej: 30)
   }) {
     final config = proveedor.configTemporal;
     if (config == null) {
@@ -165,8 +182,33 @@ class MotorFEN {
     final costosVariables = proveedor.costosVariablesPorPeriodo;
     final inflacionGlobalFijos = proveedor.inflacionGlobalFijos;
 
-    // Valor residual = % de inversión requerida en el último periodo del horizonte
-    final valorResidualMonto = inversionRequerida * valorResidualPct;
+    // Activos para depreciación y valor residual
+    final activos = proveedor.inversionRequerida.activos;
+    final tasaImpuesto = tasaImpuestoPct / 100.0;
+
+    double depreciacionEnPeriodo(int periodo) {
+      double total = 0;
+      for (final activo in activos) {
+        if (activo.depreciable != true) continue;
+        final vidaAnios = activo.vidaUtilAnios ?? 0;
+        if (vidaAnios <= 0 || mesesPorPeriodo <= 0) continue;
+        final vidaPeriodos = vidaAnios * 12 / mesesPorPeriodo;
+        if (periodo <= vidaPeriodos) {
+          total += activo.costoTotal / vidaPeriodos;
+        }
+      }
+      return total;
+    }
+
+    // Valor residual = depreciables al % indicado + no depreciables al 100%.
+    final depreciablesTotal = activos
+        .where((a) => a.depreciable == true)
+        .fold<double>(0.0, (s, a) => s + a.costoTotal);
+    final noDepreciablesTotal = activos
+        .where((a) => a.depreciable != true)
+        .fold<double>(0.0, (s, a) => s + a.costoTotal);
+    final valorResidualMonto =
+        depreciablesTotal * valorResidualPct + noDepreciablesTotal;
 
     final List<FlujoPeriodo> flujos = [];
     
@@ -218,6 +260,14 @@ class MotorFEN {
         }
       }
       
+      // Depreciación lineal e impuestos
+      final depreciacion = depreciacionEnPeriodo(p);
+      final ebitdaPeriodo = ingreso - costoVariable - costoFijo;
+      final baseImpuesto = math.max(0.0, ebitdaPeriodo - interes - depreciacion);
+      final impuesto = baseImpuesto * tasaImpuesto;
+      final baseOperativa = math.max(0.0, ebitdaPeriodo - depreciacion);
+      final impuestoOperativo = baseOperativa * tasaImpuesto;
+
       // Valor residual solo en el último periodo del horizonte
       final valorResidual = (p == horizontePeriodos) ? valorResidualMonto.toDouble() : 0.0;
 
@@ -232,6 +282,9 @@ class MotorFEN {
         amortizacionCapital: amortizacionCapital,
         liquidacionSaldo: liquidacionSaldo,
         valorResidual: valorResidual,
+        depreciacion: depreciacion,
+        impuesto: impuesto,
+        impuestoOperativo: impuestoOperativo,
       ));
     }
 

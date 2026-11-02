@@ -241,12 +241,15 @@ class EvaluadorFinanciero {
     
     // Totales
     double totalIngresos = 0, totalCostosVar = 0, totalCostosFix = 0, totalIntereses = 0, totalAmortizacion = 0;
+    double totalImpuestos = 0, totalDepreciacion = 0;
     for (int i = 1; i < flujos.length; i++) {
       totalIngresos += flujos[i].ingreso;
       totalCostosVar += flujos[i].costoVariable;
       totalCostosFix += flujos[i].costoFijo;
       totalIntereses += flujos[i].interes;
       totalAmortizacion += flujos[i].amortizacionCapital;
+      totalImpuestos += flujos[i].impuesto;
+      totalDepreciacion += flujos[i].depreciacion;
     }
     
     final ebitdaTotal = totalIngresos - (flujos.skip(1).fold(0.0, (s, f) => s + f.costoVariable + f.costoFijo));
@@ -259,9 +262,11 @@ class EvaluadorFinanciero {
       'monto_prestamo': motor.montoPrestamo,
       'total_ingresos': totalIngresos,
       'total_costos_variables': totalCostosVar,
-      'total_costos_fijos': flujos.skip(1).fold(0.0, (s, f) => s + f.costoFijo),
+      'total_costos_fijos': totalCostosFix,
       'total_intereses': totalIntereses,
       'total_amortizacion_capital': totalAmortizacion,
+      'total_impuestos': totalImpuestos,
+      'total_depreciacion': totalDepreciacion,
       'ebitda_total': ebitdaTotal,
       'utilidad_total': utilidadTotal,
       'flujo_caja_total': flujoCajaTotal,

@@ -176,89 +176,155 @@ class _SeccionActivosState extends State<SeccionActivos> {
     final nombreCtrl = TextEditingController();
     final unidadesCtrl = TextEditingController(text: '1');
     final costoCtrl = TextEditingController();
+    final vidaCtrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    bool? depreciable;
 
     await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nuevo Activo'),
-        content: SizedBox(
-          width: 400,
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nombreCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del Activo *',
-                    hintText: 'Ej: Bomba centrífuga, Tubería PVC, Terreno',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
-                  textCapitalization: TextCapitalization.words,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Nuevo Activo'),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nombreCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Nombre del Activo *',
+                        hintText: 'Ej: Bomba centrífuga, Tubería PVC, Terreno',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: unidadesCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Unidades Necesarias *',
+                        hintText: 'Ej: 1, 2, 500',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,]+$'))],
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Requerido';
+                        final n = int.tryParse(v.replaceAll(',', ''));
+                        if (n == null || n < 1) return 'Mínimo 1';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: costoCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Costo Unitario *',
+                        hintText: 'Ej: 800,000',
+                        border: OutlineInputBorder(),
+                        prefixText: '\$ ',
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,.]+$'))],
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Requerido';
+                        final n = double.tryParse(v.replaceAll(',', ''));
+                        if (n == null || n <= 0) return 'Debe ser > 0';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '¿El activo es depreciable? *',
+                        style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: RadioListTile<bool>(
+                            value: true,
+                            groupValue: depreciable,
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Sí'),
+                            onChanged: (v) => setDialogState(() => depreciable = v),
+                          ),
+                        ),
+                        Expanded(
+                          child: RadioListTile<bool>(
+                            value: false,
+                            groupValue: depreciable,
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('No'),
+                            onChanged: (v) => setDialogState(() => depreciable = v),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (depreciable == true) ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: vidaCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Vida útil (años) *',
+                          hintText: 'Capture la vida útil',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Requerido';
+                          final n = int.tryParse(v);
+                          if (n == null || n <= 0) return 'Debe ser > 0';
+                          return null;
+                        },
+                      ),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: unidadesCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Unidades Necesarias *',
-                    hintText: 'Ej: 1, 2, 500',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,]+$'))],
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    final n = int.tryParse(v.replaceAll(',', ''));
-                    if (n == null || n < 1) return 'Mínimo 1';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: costoCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Costo Unitario *',
-                    hintText: 'Ej: 800,000',
-                    border: OutlineInputBorder(),
-                    prefixText: '\$ ',
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[\d,.]+$'))],
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Requerido';
-                    final n = double.tryParse(v.replaceAll(',', ''));
-                    if (n == null || n <= 0) return 'Debe ser > 0';
-                    return null;
-                  },
-                ),
-              ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (depreciable == null) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Indique si el activo es depreciable'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                if (formKey.currentState?.validate() != true) return;
+                final nuevo = Activo(
+                  id: 'act_${DateTime.now().millisecondsSinceEpoch}_$_nextId',
+                  nombre: nombreCtrl.text.trim(),
+                  unidades: int.parse(unidadesCtrl.text.replaceAll(',', '')),
+                  costoUnitario: double.parse(costoCtrl.text.replaceAll(',', '')),
+                  depreciable: depreciable,
+                  vidaUtilAnios: depreciable == true ? int.parse(vidaCtrl.text) : null,
+                );
+                _nextId++;
+                proveedor.agregarActivo(nuevo);
+                Navigator.pop(ctx);
+              },
+              child: const Text('Agregar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState?.validate() != true) return;
-              final nuevo = Activo(
-                id: 'act_${DateTime.now().millisecondsSinceEpoch}_$_nextId',
-                nombre: nombreCtrl.text.trim(),
-                unidades: int.parse(unidadesCtrl.text.replaceAll(',', '')),
-                costoUnitario: double.parse(costoCtrl.text.replaceAll(',', '')),
-              );
-              _nextId++;
-              proveedor.agregarActivo(nuevo);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
       ),
     );
   }
@@ -294,8 +360,10 @@ class _ActivoCardState extends State<_ActivoCard> {
   late final TextEditingController _nombreCtrl;
   late final TextEditingController _unidadesCtrl;
   late final TextEditingController _costoCtrl;
+  late final TextEditingController _vidaCtrl;
   final _formKey = GlobalKey<FormState>();
   bool _editando = false;
+  bool? _depreciable;
 
   @override
   void initState() {
@@ -303,6 +371,8 @@ class _ActivoCardState extends State<_ActivoCard> {
     _nombreCtrl = TextEditingController(text: widget.activo.nombre);
     _unidadesCtrl = TextEditingController(text: widget.activo.unidades.toString());
     _costoCtrl = TextEditingController(text: widget.activo.costoUnitario.toStringAsFixed(2));
+    _vidaCtrl = TextEditingController(text: widget.activo.vidaUtilAnios?.toString() ?? '');
+    _depreciable = widget.activo.depreciable;
   }
 
   @override
@@ -310,6 +380,7 @@ class _ActivoCardState extends State<_ActivoCard> {
     _nombreCtrl.dispose();
     _unidadesCtrl.dispose();
     _costoCtrl.dispose();
+    _vidaCtrl.dispose();
     super.dispose();
   }
 
@@ -319,14 +390,27 @@ class _ActivoCardState extends State<_ActivoCard> {
   }
 
   void _guardar() {
+    if (_depreciable == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Indique si el activo es depreciable'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      setState(() => _editando = true);
+      return;
+    }
     if (_formKey.currentState?.validate() != true) {
       setState(() => _editando = true);
       return;
     }
-    final updated = widget.activo.copyWith(
+    final updated = Activo(
+      id: widget.activo.id,
       nombre: _nombreCtrl.text.trim(),
       unidades: int.parse(_unidadesCtrl.text.replaceAll(',', '')),
       costoUnitario: double.parse(_costoCtrl.text.replaceAll(',', '')),
+      depreciable: _depreciable,
+      vidaUtilAnios: _depreciable == true ? int.parse(_vidaCtrl.text) : null,
     );
     widget.onUpdate(updated);
   }
@@ -390,6 +474,8 @@ class _ActivoCardState extends State<_ActivoCard> {
                         _nombreCtrl.text = activo.nombre;
                         _unidadesCtrl.text = activo.unidades.toString();
                         _costoCtrl.text = activo.costoUnitario.toStringAsFixed(2);
+                        _vidaCtrl.text = activo.vidaUtilAnios?.toString() ?? '';
+                        _depreciable = activo.depreciable;
                       });
                     },
                   ),
@@ -455,6 +541,53 @@ class _ActivoCardState extends State<_ActivoCard> {
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '¿El activo es depreciable? *',
+                  style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      value: true,
+                      groupValue: _depreciable,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Sí'),
+                      onChanged: (v) => setState(() => _depreciable = v),
+                    ),
+                  ),
+                  Expanded(
+                    child: RadioListTile<bool>(
+                      value: false,
+                      groupValue: _depreciable,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('No'),
+                      onChanged: (v) => setState(() => _depreciable = v),
+                    ),
+                  ),
+                ],
+              ),
+              if (_depreciable == true)
+                TextFormField(
+                  controller: _vidaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Vida útil (años)',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Requerido';
+                    final n = int.tryParse(v);
+                    if (n == null || n <= 0) return 'Debe ser > 0';
+                    return null;
+                  },
+                ),
             ] else ...[
               // Modo vista: muestra resumen discreto (SIN costo total)
               Row(
@@ -469,6 +602,14 @@ class _ActivoCardState extends State<_ActivoCard> {
                     label: 'Costo Unit.',
                     value: _formatCurrency(activo.costoUnitario),
                     icon: Icons.attach_money,
+                  ),
+                  const SizedBox(width: 12),
+                  _InfoChip(
+                    label: 'Depreciable',
+                    value: activo.depreciable == null
+                        ? 'Pendiente'
+                        : (activo.depreciable == true ? 'Sí' : 'No'),
+                    icon: Icons.receipt_long,
                   ),
                   const Spacer(),
                   // Indicador sutil de que hay costo total calculado internamente

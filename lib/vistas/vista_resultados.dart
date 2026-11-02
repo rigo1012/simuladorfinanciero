@@ -241,6 +241,8 @@ class VistaResultados extends StatelessWidget {
           DataColumn(label: Text('EBITDA'), numeric: true),
           DataColumn(label: Text('Intereses'), numeric: true),
           DataColumn(label: Text('UAI'), numeric: true),
+          DataColumn(label: Text('Depreciación'), numeric: true),
+          DataColumn(label: Text('Impuestos'), numeric: true),
           DataColumn(label: Text('Amort. Cap.'), numeric: true),
           DataColumn(label: Text('Liq. Saldo'), numeric: true),
           DataColumn(label: Text('Val. Res.'), numeric: true),
@@ -257,6 +259,8 @@ class VistaResultados extends StatelessWidget {
             DataCell(Text(_formatCurrency(map['ebitda']))),
             DataCell(Text(_formatCurrency(map['interes']))),
             DataCell(Text(_formatCurrency(map['uai']))),
+            DataCell(Text(_formatCurrency(map['depreciacion']))),
+            DataCell(Text(_formatCurrency(map['impuesto']))),
             DataCell(Text(_formatCurrency(map['amortizacion_capital']))),
             DataCell(Text(_formatCurrency(map['liquidacion_saldo']))),
             DataCell(Text(_formatCurrency(map['valor_residual']))),
@@ -442,17 +446,21 @@ class VistaResultados extends StatelessWidget {
 
   Future<void> _recalcular(ProveedorSimulador proveedor) async {
     proveedor.procesarSimulacionSimple(
-      proveedor.ultimaTREMA > 0 ? proveedor.ultimaTREMA : 12.0,
-      proveedor.ultimoHorizonte > 0 ? proveedor.ultimoHorizonte : 5,
+      proveedor.ultimaTREMA,
+      proveedor.ultimoHorizonte,
     );
   }
 
   ResultadoEvaluacion _reconstruirEvaluacion(ProveedorSimulador proveedor) {
+    final residual = proveedor.valorResidualPct;
+    final impuesto = proveedor.tasaImpuestoPct;
     return EvaluadorFinanciero.evaluar(
       MotorFEN.calcular(
         proveedor: proveedor,
-        tremaPct: proveedor.ultimaTREMA > 0 ? proveedor.ultimaTREMA : 12.0,
-        horizonteAnios: proveedor.ultimoHorizonte > 0 ? proveedor.ultimoHorizonte : 5,
+        tremaPct: proveedor.ultimaTREMA,
+        horizonteAnios: proveedor.ultimoHorizonte,
+        valorResidualPct: (residual ?? 0) / 100,
+        tasaImpuestoPct: impuesto ?? 0,
       ),
     );
   }

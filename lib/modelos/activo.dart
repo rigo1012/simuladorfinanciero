@@ -9,11 +9,20 @@ class Activo {
   final int unidades;
   final double costoUnitario;
 
+  /// Define si el activo se deprecia. Null cuando el usuario aún no lo decide
+  /// (por ejemplo, activos de proyectos anteriores).
+  final bool? depreciable;
+
+  /// Vida útil en años. Obligatoria solo si [depreciable] es true.
+  final int? vidaUtilAnios;
+
   Activo({
     required this.id,
     required this.nombre,
     required this.unidades,
     required this.costoUnitario,
+    this.depreciable,
+    this.vidaUtilAnios,
   });
 
   /// Costo total calculado internamente (no se muestra en UI)
@@ -25,12 +34,16 @@ class Activo {
     String? nombre,
     int? unidades,
     double? costoUnitario,
+    bool? depreciable,
+    int? vidaUtilAnios,
   }) {
     return Activo(
       id: id ?? this.id,
       nombre: nombre ?? this.nombre,
       unidades: unidades ?? this.unidades,
       costoUnitario: costoUnitario ?? this.costoUnitario,
+      depreciable: depreciable ?? this.depreciable,
+      vidaUtilAnios: vidaUtilAnios ?? this.vidaUtilAnios,
     );
   }
 
@@ -41,20 +54,25 @@ class Activo {
       'nombre': nombre,
       'unidades': unidades,
       'costo_unitario': costoUnitario,
+      'depreciable': depreciable,
+      'vida_util_anios': vidaUtilAnios,
     };
   }
 
   factory Activo.fromMap(Map<String, dynamic> map) {
+    final vidaUtil = map['vida_util_anios'];
     return Activo(
       id: map['id'] as String,
       nombre: map['nombre'] as String,
-      unidades: map['unidades'] as int,
+      unidades: (map['unidades'] as num).toInt(),
       costoUnitario: (map['costo_unitario'] as num).toDouble(),
+      depreciable: map['depreciable'] as bool?,
+      vidaUtilAnios: vidaUtil == null ? null : (vidaUtil as num).toInt(),
     );
   }
 
   @override
-  String toString() => 'Activo(id: $id, nombre: $nombre, unidades: $unidades, costoUnitario: $costoUnitario, costoTotal: $costoTotal)';
+  String toString() => 'Activo(id: $id, nombre: $nombre, unidades: $unidades, costoUnitario: $costoUnitario, costoTotal: $costoTotal, depreciable: $depreciable, vidaUtilAnios: $vidaUtilAnios)';
 
   @override
   bool operator ==(Object other) =>
@@ -64,10 +82,12 @@ class Activo {
           id == other.id &&
           nombre == other.nombre &&
           unidades == other.unidades &&
-          costoUnitario == other.costoUnitario;
+          costoUnitario == other.costoUnitario &&
+          depreciable == other.depreciable &&
+          vidaUtilAnios == other.vidaUtilAnios;
 
   @override
-  int get hashCode => id.hashCode ^ nombre.hashCode ^ unidades.hashCode ^ costoUnitario.hashCode;
+  int get hashCode => id.hashCode ^ nombre.hashCode ^ unidades.hashCode ^ costoUnitario.hashCode ^ depreciable.hashCode ^ vidaUtilAnios.hashCode;
 }
 
 /// Contenedor de la lista de activos y su suma total (Inversión Requerida)

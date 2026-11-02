@@ -45,11 +45,11 @@ void main() {
       final random = math.Random(42); // Seed fijo para reproducibilidad
       
       final activos = [
-        Activo(id: 'a1', nombre: 'Bomba Centrífuga', unidades: 2, costoUnitario: 150000),
-        Activo(id: 'a2', nombre: 'Tubería PVC 6"', unidades: 500, costoUnitario: 850),
-        Activo(id: 'a3', nombre: 'Sistema Automatización', unidades: 1, costoUnitario: 280000),
-        Activo(id: 'a4', nombre: 'Tanque Almacenamiento', unidades: 2, costoUnitario: 95000),
-        Activo(id: 'a5', nombre: 'Terreno', unidades: 1, costoUnitario: 500000),
+        Activo(id: 'a1', nombre: 'Bomba Centrífuga', unidades: 2, costoUnitario: 150000, depreciable: true, vidaUtilAnios: 10),
+        Activo(id: 'a2', nombre: 'Tubería PVC 6"', unidades: 500, costoUnitario: 850, depreciable: true, vidaUtilAnios: 10),
+        Activo(id: 'a3', nombre: 'Sistema Automatización', unidades: 1, costoUnitario: 280000, depreciable: true, vidaUtilAnios: 10),
+        Activo(id: 'a4', nombre: 'Tanque Almacenamiento', unidades: 2, costoUnitario: 95000, depreciable: true, vidaUtilAnios: 10),
+        Activo(id: 'a5', nombre: 'Terreno', unidades: 1, costoUnitario: 500000, depreciable: false),
       ];
       
       for (final a in activos) {
@@ -186,6 +186,8 @@ void main() {
       // ========== PASO 6: SIMULACIÓN COMPLETA ==========
       final tasaTREMA = 12.0; // 12% anual
       final horizonteAnios = 5;
+      proveedor.setTasaImpuestoPct(30);
+      proveedor.setValorResidualPct(10);
       
       await proveedor.procesarSimulacionSimple(tasaTREMA, horizonteAnios);
       
@@ -280,7 +282,7 @@ void main() {
         cosechasPorAnio: 1,
       )); // 6 periodos
       
-      proveedor.agregarActivo(Activo(id: 'a1', nombre: 'Test', unidades: 1, costoUnitario: 1000000));
+      proveedor.agregarActivo(Activo(id: 'a1', nombre: 'Test', unidades: 1, costoUnitario: 1000000, depreciable: true, vidaUtilAnios: 10));
       
       // Verificar que la inversión requerida se calcula correctamente
       expect(proveedor.inversionRequerida.total, equals(1000000.0));
@@ -325,6 +327,8 @@ void main() {
         proveedor: proveedor,
         tremaPct: 10,
         horizonteAnios: 3,
+        valorResidualPct: 0.10,
+        tasaImpuestoPct: 0,
       );
       
       // DEBUG: Verificar flujos
@@ -346,6 +350,13 @@ void main() {
         expect(motor.flujos[p].ebitda, equals(350000.0));
         final expectedFlujo = p == 6 ? 450000.0 : 350000.0; // Último periodo incluye valor residual 100k
         expect(motor.flujos[p].flujoCaja, equals(expectedFlujo), reason: 'Periodo $p');
+      }
+
+      // Depreciación lineal: 1M / (10 años * 12 / 6 meses) = 50,000 por periodo.
+      // Con ISR 0 % el impuesto es 0 y no altera el flujo.
+      for (int p = 1; p <= 6; p++) {
+        expect(motor.flujos[p].depreciacion, equals(50000.0), reason: 'Depreciación P$p');
+        expect(motor.flujos[p].impuesto, equals(0.0), reason: 'Impuesto P$p');
       }
       
       final evaluacion = EvaluadorFinanciero.evaluar(motor);
