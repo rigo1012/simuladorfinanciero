@@ -189,12 +189,6 @@ void main() {
       
       await proveedor.procesarSimulacionSimple(tasaTREMA, horizonteAnios);
       
-      // DEBUG
-      print('DEBUG resultado keys: ${proveedor.ultimoResultado?.keys}');
-      print('DEBUG tir: ${proveedor.ultimoResultado?['tir']}');
-      print('DEBUG tir_operativa: ${proveedor.ultimoResultado?['tir_operativa']}');
-      print('DEBUG vpn: ${proveedor.ultimoResultado?['vpn']}');
-      
       // Verificar que no hubo errores
       expect(proveedor.error, isNull);
       expect(proveedor.ultimoResultado, isNotNull);
@@ -268,8 +262,6 @@ void main() {
       kpis.forEach((key, value) {
         print('$key: \$${value is double ? value.toStringAsFixed(2) : value}');
       });
-      
-      print('\n✅ PRUEBA COMPLETA EXITOSA');
     });
 
     test('Motor FEN directo: Verificar cálculos matemáticos', () {
@@ -290,11 +282,6 @@ void main() {
         pctDeuda: 0,
         inversionRequerida: 1000000,
       ));
-      
-      // DEBUG: Verificar estado del proveedor
-      print('DEBUG: estructuraCapital = ${proveedor.estructuraCapital}');
-      print('DEBUG: aportePropio = ${proveedor.aportePropio}');
-      print('DEBUG: tieneDeuda = ${proveedor.tieneDeuda}');
       
       // Verificar que el aporte propio se calcula correctamente (100% de 1M = 1M)
       expect(proveedor.aportePropio, equals(1000000.0));
@@ -328,13 +315,6 @@ void main() {
         valorResidualPct: 0.10,
         tasaImpuestoPct: 0,
       );
-      
-      // DEBUG: Verificar flujos
-      print('DEBUG: Periodo 0 flujoCaja = ${motor.flujos[0].flujoCaja}');
-      for (int p = 1; p <= 6; p++) {
-        final f = motor.flujos[p];
-        print('DEBUG P$p: ingreso=${f.ingreso}, costVar=${f.costoVariable}, costFix=${f.costoFijo}, ebitda=${f.ebitda}, flujoCaja=${f.flujoCaja}');
-      }
       
       expect(motor.flujos.length, equals(7)); // 0 + 6 periodos
       expect(motor.flujos[0].flujoCaja, equals(-1000000.0)); // Periodo 0 = -aporte propio

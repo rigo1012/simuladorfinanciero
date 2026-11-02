@@ -63,6 +63,8 @@ windows/ linux/ macos/        # Proyectos nativos de plataforma
 - Exportación de PDF con autoguardado en Documentos y visor de documentos generados.
 - Evaluación financiera con ISR, depreciación lineal y valor residual por tipo de activo.
 
+El manual de usuario se entrega por separado.
+
 ## Autor(es)
 
 - [COMPLETAR: nombre del autor o autores]
