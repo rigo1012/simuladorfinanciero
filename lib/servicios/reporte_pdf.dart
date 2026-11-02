@@ -437,20 +437,31 @@ class ReportePDF {
   }
 
   static pw.Widget _buildAnalisisSensibilidad(ResultadoMotorFEN motor, PdfColor primary) {
-    final trema = motor.trema;
-    
-    // Sensibilidad: VPN vs TREMA
-    final tasas = [trema * 0.5, trema * 0.75, trema, trema * 1.25, trema * 1.5];
-    final vpns = tasas.map((t) => _calcularVPN(motor.flujosParaVPN, t)).toList();
+    final tremaAnual = motor.trema;
+    final mesesPorPeriodo = motor.config.mesesPorPeriodo;
+
+    // Sensibilidad: VPN vs TREMA anual. Se descuenta con la tasa POR PERIODO
+    // equivalente para coincidir con el VPN principal.
+    final tasasAnuales = [
+      tremaAnual * 0.5,
+      tremaAnual * 0.75,
+      tremaAnual,
+      tremaAnual * 1.25,
+      tremaAnual * 1.5,
+    ];
+    final vpns = tasasAnuales.map((ta) {
+      final tasaPeriodo = (math.pow(1 + ta, mesesPorPeriodo / 12) - 1).toDouble();
+      return _calcularVPN(motor.flujosParaVPN, tasaPeriodo);
+    }).toList();
     
     return _buildSection(
       'Análisis de Sensibilidad: VPN vs Tasa de Descuento',
       primary,
       [
         pw.Table.fromTextArray(
-          headers: ['Tasa de Descuento', 'VPN', 'Viable'],
-          data: List.generate(tasas.length, (i) => [
-            '${(tasas[i] * 100).toStringAsFixed(1)}%',
+          headers: ['TREMA anual', 'VPN', 'Viable'],
+          data: List.generate(tasasAnuales.length, (i) => [
+            '${(tasasAnuales[i] * 100).toStringAsFixed(1)}%',
             _formatCurrency(vpns[i]),
             vpns[i] > 0 ? 'SÍ' : 'NO',
           ]),
@@ -462,8 +473,9 @@ class ReportePDF {
         ),
         pw.SizedBox(height: 8),
         pw.Text(
-          'Muestra cómo cambia el VPN al variar la TREMA. '
-          'Punto de inflexión (VPN=0) aproximado = TIR del proyecto.',
+          'Muestra cómo cambia el VPN al variar la TREMA anual. '
+          'El VPN se descuenta con la tasa equivalente del periodo '
+          '($mesesPorPeriodo meses). Punto de inflexión (VPN=0) ≈ TIR anual del proyecto.',
           style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontStyle: pw.FontStyle.italic),
         ),
       ],

@@ -350,8 +350,9 @@ void main() {
       
       final evaluacion = EvaluadorFinanciero.evaluar(motor);
       
-      // VPN a 10%: -1M + Σ(350k/(1.1)^t) para t=1..6
-      // VPN ≈ -1M + 350k * 4.355 = -1M + 1.524M = 524k
+      // VPN con TREMA 10% ANUAL convertida a tasa del periodo (6 meses):
+      // r = (1.10)^(6/12) - 1 ≈ 4.8809% por periodo
+      // VPN = -1M + 350k·anualidad(6, r) + 100k·(1+r)^-6 ≈ 858,419
       expect(evaluacion.vpn, greaterThan(0));
       expect(evaluacion.veredicto, equals('VIABLE'));
       expect(evaluacion.tir, greaterThan(10)); // TIR > TREMA si VPN > 0

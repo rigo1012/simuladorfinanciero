@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../controladores/proveedor_simulador.dart';
 import '../modelos/configuracion_temporal.dart';
 import '../modelos/estructura_capital.dart';
@@ -98,6 +99,10 @@ class ResultadoMotorFEN {
     required this.trema,
     required this.horizontePeriodos,
   });
+
+  /// TREMA equivalente para un periodo de [config.mesesPorPeriodo] meses.
+  /// [trema] es la tasa ANUAL efectiva en decimal; esta es la tasa por periodo.
+  double get tasaPeriodo => (math.pow(1 + trema, config.mesesPorPeriodo / 12) - 1).toDouble();
 
   /// Flujo de caja completo para VPN/TIR (Periodo 0 = -aportePropio, Periodo 1..N = flujoCaja)
   List<double> get flujosParaVPN {

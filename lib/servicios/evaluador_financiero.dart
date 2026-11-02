@@ -57,45 +57,51 @@ class EvaluadorFinanciero {
   static ResultadoEvaluacion evaluar(ResultadoMotorFEN motor) {
     final flujos = motor.flujosParaVPN;
     final flujosOperativos = motor.flujosOperativosParaVPN;
-    final tasa = motor.trema;
+    // Tasa de descuento POR PERIODO derivada de la TREMA anual.
+    final tasaPeriodo = motor.tasaPeriodo;
+    final mesesPorPeriodo = motor.config.mesesPorPeriodo;
 
     // 1. VPN (con financiamiento)
-    final vpn = _calcularVPN(flujos, tasa);
+    final vpn = _calcularVPN(flujos, tasaPeriodo);
     
     // 2. VPN Operativo (sin financiamiento)
-    final vpnOperativo = _calcularVPN(flujosOperativos, tasa);
+    final vpnOperativo = _calcularVPN(flujosOperativos, tasaPeriodo);
 
-    // 3. TIR (con financiamiento)
-    final tir = _calcularTIR(flujos);
+    // 3. TIR por periodo (con financiamiento)
+    final tirPeriodo = _calcularTIR(flujos);
     
-    // 4. TIR Operativa
-    final tirOperativa = _calcularTIR(flujosOperativos);
+    // 4. TIR por periodo operativa
+    final tirOperativaPeriodo = _calcularTIR(flujosOperativos);
 
     // 5. Payback Simple (con financiamiento)
     final payback = _calcularPayback(flujos);
     
     // 6. Payback Descontado
-    final paybackDesc = _calcularPaybackDescontado(flujos, tasa);
+    final paybackDesc = _calcularPaybackDescontado(flujos, tasaPeriodo);
 
     // 7. Beneficio/Costo (con financiamiento)
-    final bc = _calcularBC(flujos, tasa);
+    final bc = _calcularBC(flujos, tasaPeriodo);
     
     // 8. Beneficio/Costo Operativo
-    final bcOperativo = _calcularBC(flujosOperativos, tasa);
+    final bcOperativo = _calcularBC(flujosOperativos, tasaPeriodo);
 
     // 9. Veredicto
     final esViable = vpn > 0;
     final veredicto = esViable ? 'VIABLE' : 'NO VIABLE';
 
-    // KPIs adicionales
-    final kpis = _calcularKPIs(motor, vpn, tir, payback?.toDouble());
+    // KPIs adicionales (la TIR se guarda anualizada más abajo)
+    final kpis = _calcularKPIs(motor, vpn, tirPeriodo, payback?.toDouble());
+
+    // Las TIR se calculan por periodo y se convierten a anual efectiva.
+    final tirAnual = _anualizarTasa(tirPeriodo, mesesPorPeriodo);
+    final tirOperativaAnual = _anualizarTasa(tirOperativaPeriodo, mesesPorPeriodo);
 
     return ResultadoEvaluacion(
       motorFEN: motor,
       vpn: vpn,
       vpnOperativo: vpnOperativo,
-      tir: tir != null ? tir * 100 : null, // Convertir a %
-      tirOperativa: tirOperativa != null ? tirOperativa * 100 : null,
+      tir: tirAnual != null ? tirAnual * 100 : null, // % anual efectiva
+      tirOperativa: tirOperativaAnual != null ? tirOperativaAnual * 100 : null,
       paybackPeriodos: payback,
       paybackDescontado: paybackDesc,
       beneficioCosto: bc,
@@ -104,6 +110,15 @@ class EvaluadorFinanciero {
       veredicto: veredicto,
       kpis: kpis,
     );
+  }
+
+  /// Convierte una tasa efectiva por periodo a tasa anual efectiva.
+  /// Retorna null si no hay tasa o si la conversión no es válida.
+  static double? _anualizarTasa(double? tasaPeriodo, int mesesPorPeriodo) {
+    if (tasaPeriodo == null || mesesPorPeriodo <= 0) return null;
+    final base = 1 + tasaPeriodo;
+    if (base <= 0) return null;
+    return (math.pow(base, 12 / mesesPorPeriodo) - 1).toDouble();
   }
 
   /// Calcula VPN = Σ Flujo[t] / (1+tasa)^t
@@ -115,14 +130,16 @@ class EvaluadorFinanciero {
     return vpn;
   }
 
-  /// Calcula TIR por método de la secante (Newton-Raphson simplificado).
+  /// Calcula la TIR por periodo con Newton-Raphson y, si no converge,
+  /// recurre a bisección en [-0.99, 10]. Solo devuelve null si no hay
+  /// cambio de signo en los flujos.
   static double? _calcularTIR(List<double> flujos, {double guess = 0.1, int maxIter = 100, double tol = 1e-8}) {
-    double tasa = guess;
-    
     // Verificar que hay cambio de signo (necesario para TIR)
     final signos = flujos.map((f) => f > 0 ? 1 : (f < 0 ? -1 : 0)).where((s) => s != 0).toSet();
     if (signos.length < 2) return null; // No hay inversión y retorno
 
+    // 1) Newton-Raphson
+    double tasa = guess;
     for (int i = 0; i < maxIter; i++) {
       double vpn = 0, dVpn = 0;
       for (int t = 0; t < flujos.length; t++) {
@@ -132,19 +149,53 @@ class EvaluadorFinanciero {
           dVpn -= t * flujos[t] / (factor * (1 + tasa));
         }
       }
-      
+
       if (vpn.abs() < tol) return tasa;
       if (dVpn == 0) break;
-      
-      double nuevaTasa = tasa - vpn / dVpn;
-      
-      // Validar que la nueva tasa sea razonable
-      if (nuevaTasa <= -0.99 || nuevaTasa > 10) return null;
+
+      final nuevaTasa = tasa - vpn / dVpn;
+
+      // Si se sale del rango razonable, se abandona Newton y se usa bisección.
+      if (!nuevaTasa.isFinite || nuevaTasa <= -0.999 || nuevaTasa > 1000) break;
       if ((nuevaTasa - tasa).abs() < tol) return nuevaTasa;
-      
+
       tasa = nuevaTasa;
     }
-    return null;
+
+    // 2) Bisección como respaldo
+    return _tirBiseccion(flujos, -0.99, 10.0, tol);
+  }
+
+  /// Bisección para la TIR por periodo en el intervalo [lo, hi].
+  static double? _tirBiseccion(List<double> flujos, double lo, double hi, double tol) {
+    double vpnEn(double tasa) {
+      double vpn = 0;
+      for (int t = 0; t < flujos.length; t++) {
+        vpn += flujos[t] / math.pow(1 + tasa, t);
+      }
+      return vpn;
+    }
+
+    var vLo = vpnEn(lo);
+    var vHi = vpnEn(hi);
+    if (vLo == 0) return lo;
+    if (vHi == 0) return hi;
+    if (vLo.sign == vHi.sign) return null; // No hay cambio de signo
+
+    for (int i = 0; i < 200; i++) {
+      final medio = (lo + hi) / 2;
+      final vMedio = vpnEn(medio);
+      if (vMedio.abs() < tol || (hi - lo).abs() < tol) return medio;
+
+      if (vMedio.sign == vLo.sign) {
+        lo = medio;
+        vLo = vMedio;
+      } else {
+        hi = medio;
+        vHi = vMedio;
+      }
+    }
+    return (lo + hi) / 2;
   }
 
   /// Payback simple: primer periodo donde flujo acumulado ≥ 0

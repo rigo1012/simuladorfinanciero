@@ -174,12 +174,14 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
             children: [
               Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
               const SizedBox(width: 12),
-              Text(
-                'Cambiar configuración reinicia datos',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade800,
-                  fontSize: 16,
+              Expanded(
+                child: Text(
+                  'Cambiar configuración reinicia datos',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade800,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],

@@ -38,13 +38,16 @@ void main() {
       ),
     );
 
-    // Verify the temporal config title appears (Paso 0)
-    expect(find.text('Configuración Temporal Inicial'), findsOneWidget);
-    
-    // Verify form fields exist (meses, años, ciclos)
-    expect(find.byType(TextFormField), findsNWidgets(3));
-    
-    // Verify save button exists
-    expect(find.text('Guardar y Continuar'), findsOneWidget);
+    // Con la configuración ya establecida, el encabezado cambia de título.
+    expect(find.text('Reconfigurar Horizonte Temporal'), findsOneWidget);
+
+    // Verificar que los campos de configuración temporal existen por su etiqueta.
+    expect(find.text('Duración del Periodo (meses) *'), findsOneWidget);
+    expect(find.text('Años de Proyección Fiscal *'), findsOneWidget);
+    expect(find.text('Cosechas / Ciclos por Año *'), findsOneWidget);
+    expect(find.byType(TextFormField), findsWidgets);
+
+    // Verificar botón de guardado en estado ya configurado.
+    expect(find.text('Actualizar Configuración'), findsOneWidget);
   });
 }
