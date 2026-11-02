@@ -28,6 +28,66 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
   final FocusNode _nodoImpuesto = FocusNode();
   final FocusNode _nodoResidual = FocusNode();
 
+  @override
+  void initState() {
+    super.initState();
+    // Refleja los parámetros cargados desde un proyecto guardado.
+    final proveedor = context.read<ProveedorSimulador>();
+    if (proveedor.ultimaTREMA > 0) {
+      _tasaCtrl.text = proveedor.ultimaTREMA.toString();
+    }
+    if (proveedor.ultimoHorizonte > 0) {
+      _aniosCtrl.text = proveedor.ultimoHorizonte.toString();
+    }
+    final impuesto = proveedor.tasaImpuestoPct;
+    if (impuesto != null) {
+      _impuestoCtrl.text = impuesto.toString();
+    }
+    final residual = proveedor.valorResidualPct;
+    if (residual != null) {
+      _residualCtrl.text = residual.toString();
+    }
+  }
+
+  Future<void> _guardarProyecto(ProveedorSimulador proveedor) async {
+    final nombreCtrl = TextEditingController();
+    final nombre = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Guardar proyecto'),
+        content: TextField(
+          controller: nombreCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Nombre del proyecto *',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              final n = nombreCtrl.text.trim();
+              if (n.isEmpty) return;
+              Navigator.pop(ctx, n);
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    nombreCtrl.dispose();
+    if (nombre == null || nombre.isEmpty) return;
+    await proveedor.guardarProyectoActual(nombre);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Proyecto "$nombre" guardado'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   void _enviarFormulario(ProveedorSimulador proveedor) {
     if (proveedor.estaCargando) return;
 
@@ -84,6 +144,30 @@ class _VistaFormularioInversionState extends State<VistaFormularioInversion> {
             key: _llaveFormulario,
             child: ListView(
               children: [
+                // Cabecera con guardado de proyecto
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Proyecto de Riego',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.save_outlined, size: 20),
+                      label: const Text('Guardar proyecto'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        side: BorderSide(color: Colors.blue.shade400, width: 2),
+                        foregroundColor: Colors.blue.shade700,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => _guardarProyecto(proveedor),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
                 // === PASO 0: CONFIGURACIÓN TEMPORAL SEMPRE VISIBLE ===
                 const VistaConfigTemporal(),
                 const SizedBox(height: 24),

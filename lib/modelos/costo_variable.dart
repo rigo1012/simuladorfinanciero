@@ -59,7 +59,7 @@ class ItemCostoVariable {
   factory ItemCostoVariable.fromMap(Map<String, dynamic> map) {
     return ItemCostoVariable(
       id: map['id'] as String,
-      tipo: TipoCostoVariable.values[map['tipo'] as int],
+      tipo: TipoCostoVariable.values[(map['tipo'] as num).toInt()],
       nombre: map['nombre'] as String,
       cantidadUnitaria: (map['cantidad_unitaria'] as num).toDouble(),
       costoUnitario: (map['costo_unitario'] as num).toDouble(),
@@ -144,4 +144,20 @@ class CostoVariablePeriodo {
     'factor_inflacion': factorInflacion,
     'costo_con_inflacion': costoConInflacion,
   };
+
+  factory CostoVariablePeriodo.fromMap(Map<String, dynamic> map) {
+    final rawItems = map['items'];
+    final items = rawItems is List
+        ? rawItems
+            .whereType<Map>()
+            .map((e) => ItemCostoVariable.fromMap(Map<String, dynamic>.from(e)))
+            .toList()
+        : <ItemCostoVariable>[];
+    return CostoVariablePeriodo(
+      periodo: (map['periodo'] as num).toInt(),
+      items: items,
+      inflacionAnualPct: (map['inflacion_anual_pct'] as num?)?.toDouble() ?? 0,
+      mesesPorPeriodo: (map['meses_por_periodo'] as num?)?.toInt() ?? 0,
+    );
+  }
 }

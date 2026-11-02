@@ -25,6 +25,7 @@ class _DisenoEscritorioState extends State<DisenoEscritorio> {
     if (indice == 1) {
       // Dispara la lectura a SQLite sin bloquear la animación visual de la pestaña
       context.read<ProveedorSimulador>().cargarHistorial();
+      context.read<ProveedorSimulador>().cargarProyectosGuardados();
     }
     if (indice == 2) {
       // Asegurar contexto para PDF en resultados

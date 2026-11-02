@@ -25,7 +25,7 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
   late TabController _tabController;
   
   // Controllers para inflación
-  final _inflacionCtrl = TextEditingController(text: '5.0');
+  final _inflacionCtrl = TextEditingController();
   final _inflacionFocus = FocusNode();
 
   /// Cantidad de periodos que se dibujan actualmente (paginación visual).
@@ -35,6 +35,11 @@ class _SeccionCostosVariablesState extends State<SeccionCostosVariables>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // Refleja la inflación cargada desde un proyecto guardado (si existe).
+    final costos = context.read<ProveedorSimulador>().costosVariables;
+    if (costos.isNotEmpty) {
+      _inflacionCtrl.text = costos.last.inflacionAnualPct.toString();
+    }
   }
 
   @override

@@ -31,6 +31,13 @@ class _VistaConfigTemporalState extends State<VistaConfigTemporal> {
   @override
   void initState() {
     super.initState();
+    // Si hay un proyecto cargado, refleja su configuración temporal.
+    final config = context.read<ProveedorSimulador>().configTemporal;
+    if (config != null) {
+      _mesesCtrl.text = config.mesesPorPeriodo.toString();
+      _anosCtrl.text = config.anosProyeccion.toString();
+      _cosechasCtrl.text = config.cosechasPorAnio.toString();
+    }
   }
 
   @override
@@ -434,8 +441,17 @@ class _PreviewRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
-          Text(value, style: TextStyle(fontSize: 13, fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+          Expanded(
+            child: Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 13, fontWeight: bold ? FontWeight.bold : FontWeight.normal),
+            ),
+          ),
         ],
       ),
     );

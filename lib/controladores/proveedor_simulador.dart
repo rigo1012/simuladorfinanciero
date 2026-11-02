@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'dart:math' as math;
 import '../modelos/modelo_inversion.dart';
 import '../modelos/activo.dart';
@@ -45,6 +46,28 @@ class ProveedorSimulador extends ChangeNotifier {
   double? get valorResidualPct => _valorResidualPct;
   void setTasaImpuestoPct(double? v) { _tasaImpuestoPct = v; notifyListeners(); }
   void setValorResidualPct(double? v) { _valorResidualPct = v; notifyListeners(); }
+
+  // --- PROYECTOS GUARDADOS (metadatos para la vista) ---
+  List<Map<String, dynamic>> _proyectosGuardados = [];
+  List<Map<String, dynamic>> get proyectosGuardados => List.unmodifiable(_proyectosGuardados);
+
+  Future<void> cargarProyectosGuardados() async {
+    try {
+      _proyectosGuardados = await _db.listarProyectos();
+    } catch (_) {
+      _proyectosGuardados = [];
+    }
+    notifyListeners();
+  }
+
+  Future<Map<String, dynamic>?> cargarProyectoJsonPorId(int id) {
+    return _db.cargarProyectoPorId(id);
+  }
+
+  Future<void> eliminarProyectoGuardado(int id) async {
+    await _db.eliminarProyecto(id);
+    await cargarProyectosGuardados();
+  }
 
   // --- ACTIVOS (Inversión Requerida) ---
   final List<Activo> _activos = [];
@@ -785,5 +808,126 @@ class ProveedorSimulador extends ChangeNotifier {
   void limpiarUltimoResultado() {
     _ultimoResultado = null;
     notifyListeners();
+  }
+
+  /// Serializa TODO el estado del proyecto en un mapa JSON-compatible.
+  Map<String, dynamic> exportarSesion() {
+    return {
+      'version': 1,
+      'configuracion': _configTemporal?.toMap(),
+      'activos': _activos.map((a) => a.toMap()).toList(),
+      'estructura': _estructuraCapital?.toMap(),
+      'ingresos': _ingresos.map((i) => i.toMap()).toList(),
+      'costos_variables': _costosVariables.map((c) => c.toMap()).toList(),
+      'costos_fijos': _costosFijos.map((c) => c.toMap()).toList(),
+      'inflacion_global_fijos': _inflacionGlobalFijos,
+      'trema': _ultimaTREMA,
+      'horizonte': _ultimoHorizonte,
+      'tasa_impuesto_pct': _tasaImpuestoPct,
+      'valor_residual_pct': _valorResidualPct,
+    };
+  }
+
+  /// Carga un proyecto completo. Valida y reconstruye en locales antes de
+  /// asignar, de modo que un JSON inválido deja intacto el estado actual.
+  Future<void> cargarProyectoCompleto(Map<String, dynamic> json) async {
+    try {
+      final rawConfig = json['configuracion'];
+      if (rawConfig is! Map) {
+        throw const FormatException('Falta la configuración temporal');
+      }
+      final config = ConfiguracionTemporal.fromMap(Map<String, dynamic>.from(rawConfig));
+      final errorConfig = config.validar();
+      if (errorConfig != null) {
+        throw FormatException(errorConfig);
+      }
+
+      final rawActivos = json['activos'];
+      final activos = rawActivos is List
+          ? rawActivos
+              .whereType<Map>()
+              .map((e) => Activo.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : <Activo>[];
+
+      final rawEstructura = json['estructura'];
+      final estructura = rawEstructura is Map
+          ? EstructuraCapital.fromMap(Map<String, dynamic>.from(rawEstructura))
+          : null;
+
+      final rawIngresos = json['ingresos'];
+      final ingresos = rawIngresos is List
+          ? rawIngresos
+              .whereType<Map>()
+              .map((e) => IngresoPeriodo.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : <IngresoPeriodo>[];
+
+      final rawCostosVar = json['costos_variables'];
+      final costosVariables = rawCostosVar is List
+          ? rawCostosVar
+              .whereType<Map>()
+              .map((e) => CostoVariablePeriodo.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : <CostoVariablePeriodo>[];
+
+      final rawCostosFijos = json['costos_fijos'];
+      final costosFijos = rawCostosFijos is List
+          ? rawCostosFijos
+              .whereType<Map>()
+              .map((e) => CostoFijoPeriodo.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : <CostoFijoPeriodo>[];
+
+      double? leerDoubleNulo(String clave) => (json[clave] as num?)?.toDouble();
+      double leerDouble(String clave) => (json[clave] as num?)?.toDouble() ?? 0;
+      int leerInt(String clave) => (json[clave] as num?)?.toInt() ?? 0;
+
+      final inflacion = leerDouble('inflacion_global_fijos');
+      final trema = leerDouble('trema');
+      final horizonte = leerInt('horizonte');
+      final impuesto = leerDoubleNulo('tasa_impuesto_pct');
+      final residual = leerDoubleNulo('valor_residual_pct');
+
+      // Orden estable por periodo antes de asignar.
+      ingresos.sort((a, b) => a.periodo.compareTo(b.periodo));
+      costosVariables.sort((a, b) => a.periodo.compareTo(b.periodo));
+      costosFijos.sort((a, b) => a.periodo.compareTo(b.periodo));
+
+      // Asignación directa (sin reiniciar datos dependientes).
+      _configTemporal = config;
+      _activos
+        ..clear()
+        ..addAll(activos);
+      _estructuraCapital = estructura;
+      _ingresos
+        ..clear()
+        ..addAll(ingresos);
+      _costosVariables
+        ..clear()
+        ..addAll(costosVariables);
+      _costosFijos
+        ..clear()
+        ..addAll(costosFijos);
+      _inflacionGlobalFijos = inflacion;
+      _ultimaTREMA = trema;
+      _ultimoHorizonte = horizonte;
+      _tasaImpuestoPct = impuesto;
+      _valorResidualPct = residual;
+      _ultimoResultado = null;
+      _puedeDescargarPDF = false;
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      _error = 'No se pudo cargar el proyecto: $e';
+      notifyListeners();
+    }
+  }
+
+  /// Guarda el estado actual como proyecto con nombre.
+  Future<void> guardarProyectoActual(String nombre) async {
+    final json = jsonEncode(exportarSesion());
+    await _db.guardarProyecto(nombre, json);
+    await cargarProyectosGuardados();
   }
 }

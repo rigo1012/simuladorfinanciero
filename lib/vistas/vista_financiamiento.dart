@@ -60,11 +60,8 @@ class _VistaFinanciamientoState extends State<VistaFinanciamiento> {
         final config = proveedor.estaConfigurado ? proveedor.configTemporal : null;
         final financiamientoActual = proveedor.estructuraCapital;
 
-        // Valores por defecto o actuales
-        if (_pctPropioCtrl.text.isEmpty && financiamientoActual == null) {
-          _pctPropioCtrl.text = '70';
-          _pctDeudaCtrl.text = '30';
-        } else if (financiamientoActual != null && _pctPropioCtrl.text.isEmpty) {
+        // Refleja el financiamiento cargado desde un proyecto guardado.
+        if (financiamientoActual != null && _pctPropioCtrl.text.isEmpty) {
           _pctPropioCtrl.text = financiamientoActual.pctPropio.toStringAsFixed(1);
           _pctDeudaCtrl.text = financiamientoActual.pctDeuda.toStringAsFixed(1);
           _tasaInteresCtrl.text = financiamientoActual.tasaInteresAnual?.toStringAsFixed(2) ?? '';

@@ -51,6 +51,22 @@ class CostoFijoPeriodo {
     'total_base': totalBase,
     'total_con_inflacion': totalConInflacion,
   };
+
+  factory CostoFijoPeriodo.fromMap(Map<String, dynamic> map) {
+    final rawItems = map['items'];
+    final items = rawItems is List
+        ? rawItems
+            .whereType<Map>()
+            .map((e) => ItemCostoFijo.fromMap(Map<String, dynamic>.from(e)))
+            .toList()
+        : <ItemCostoFijo>[];
+    return CostoFijoPeriodo(
+      periodo: (map['periodo'] as num).toInt(),
+      items: items,
+      inflacionAnualPct: (map['inflacion_anual_pct'] as num?)?.toDouble() ?? 0,
+      mesesPorPeriodo: (map['meses_por_periodo'] as num?)?.toInt() ?? 0,
+    );
+  }
 }
 
 /// Item individual de costo fijo.

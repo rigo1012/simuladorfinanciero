@@ -18,7 +18,7 @@ class SeccionCostosFijos extends StatefulWidget {
 }
 
 class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
-  final _inflacionGlobalCtrl = TextEditingController(text: '5.0');
+  final _inflacionGlobalCtrl = TextEditingController();
 
   /// Cantidad de periodos que se dibujan actualmente (paginación visual).
   int _periodosVisibles = 1;
@@ -26,6 +26,11 @@ class _SeccionCostosFijosState extends State<SeccionCostosFijos> {
   @override
   void initState() {
     super.initState();
+    // Refleja la inflación cargada desde un proyecto guardado (si existe).
+    final inflacion = context.read<ProveedorSimulador>().inflacionGlobalFijos;
+    if (inflacion != 0) {
+      _inflacionGlobalCtrl.text = inflacion.toString();
+    }
     _inflacionGlobalCtrl.addListener(_actualizarInflacionGlobal);
   }
 

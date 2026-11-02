@@ -22,11 +22,11 @@ class EstructuraCapital {
   /// Convertir un mapa a EstructuraCapital (para persistencia)
   factory EstructuraCapital.fromMap(Map<String, dynamic> map) {
     return EstructuraCapital(
-      pctPropio: map['pct_propio'] as double,
-      pctDeuda: map['pct_deuda'] as double,
-      tasaInteresAnual: map['tasa_interes_anual'] as double?,
-      plazoMeses: map['plazo_meses'] as int?,
-      inversionRequerida: map['inversion_requerida'] as double,
+      pctPropio: (map['pct_propio'] as num).toDouble(),
+      pctDeuda: (map['pct_deuda'] as num).toDouble(),
+      tasaInteresAnual: (map['tasa_interes_anual'] as num?)?.toDouble(),
+      plazoMeses: (map['plazo_meses'] as num?)?.toInt(),
+      inversionRequerida: (map['inversion_requerida'] as num).toDouble(),
     );
   }
 

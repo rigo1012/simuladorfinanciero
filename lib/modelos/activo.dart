@@ -61,12 +61,13 @@ class Activo {
 
   factory Activo.fromMap(Map<String, dynamic> map) {
     final vidaUtil = map['vida_util_anios'];
+    final depreciableRaw = map['depreciable'];
     return Activo(
       id: map['id'] as String,
       nombre: map['nombre'] as String,
       unidades: (map['unidades'] as num).toInt(),
       costoUnitario: (map['costo_unitario'] as num).toDouble(),
-      depreciable: map['depreciable'] as bool?,
+      depreciable: depreciableRaw is bool ? depreciableRaw : null,
       vidaUtilAnios: vidaUtil == null ? null : (vidaUtil as num).toInt(),
     );
   }

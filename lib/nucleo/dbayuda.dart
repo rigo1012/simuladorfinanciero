@@ -25,7 +25,7 @@ class AyudanteBD {
     return await databaseFactoryFfi.openDatabase(
       ruta,
       options: OpenDatabaseOptions(
-        version: 3, // Incrementado para nuevas tablas de borrador
+        version: 4, // v4: columna proyecto_json para proyectos completos
         onCreate: _crearBD,
         onUpgrade: _actualizarBD,
       ),
@@ -50,17 +50,77 @@ class AyudanteBD {
         configuracion_texto TEXT NOT NULL,
         activos_texto TEXT NOT NULL,
         estructura_texto TEXT NOT NULL,
+        proyecto_json TEXT,
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
   }
 
-  // Ejecuta la destrucción controlada de la tabla anterior
+  // Migración NO destructiva: conserva 'inversion' y los borradores existentes.
   Future _actualizarBD(Database bd, int versionAnterior, int versionNueva) async {
-    if (versionAnterior < 3) {
-      await bd.execute('DROP TABLE IF EXISTS sesion_borrador');
+    await migrarEsquema(bd, versionAnterior, versionNueva);
+  }
+
+  /// Aplica la migración de esquema sin borrar datos. Público para pruebas.
+  Future<void> migrarEsquema(Database bd, int versionAnterior, int versionNueva) async {
+    if (versionAnterior < 4) {
+      // Garantiza que la tabla exista (instalaciones antiguas) sin borrar datos.
       await _crearBD(bd, versionNueva);
+
+      // Agrega la columna solo si aún no existe.
+      final info = await bd.rawQuery('PRAGMA table_info(sesion_borrador)');
+      final tieneColumna = info.any((col) => col['name'] == 'proyecto_json');
+      if (!tieneColumna) {
+        await bd.execute('ALTER TABLE sesion_borrador ADD COLUMN proyecto_json TEXT');
+      }
     }
+  }
+
+  /// Guarda un proyecto completo (JSON serializado).
+  Future<int> guardarProyecto(String nombre, String json) async {
+    final bd = await baseDatos;
+    return await bd.insert('sesion_borrador', {
+      'nombre': nombre,
+      'configuracion_texto': '',
+      'activos_texto': '',
+      'estructura_texto': '',
+      'proyecto_json': json,
+    });
+  }
+
+  /// Lista los proyectos guardados sin cargar el JSON pesado.
+  Future<List<Map<String, dynamic>>> listarProyectos() async {
+    final bd = await baseDatos;
+    return await bd.query(
+      'sesion_borrador',
+      columns: ['id', 'nombre', 'creado_en'],
+      where: 'proyecto_json IS NOT NULL',
+      orderBy: 'creado_en DESC',
+    );
+  }
+
+  /// Carga el JSON de un proyecto por su id. Devuelve null si no existe.
+  Future<Map<String, dynamic>?> cargarProyectoPorId(int id) async {
+    final bd = await baseDatos;
+    final filas = await bd.query(
+      'sesion_borrador',
+      columns: ['proyecto_json'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (filas.isEmpty) return null;
+    final raw = filas.first['proyecto_json'];
+    if (raw is! String || raw.isEmpty) return null;
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return null;
+    return Map<String, dynamic>.from(decoded);
+  }
+
+  /// Elimina un proyecto guardado.
+  Future<int> eliminarProyecto(int id) async {
+    final bd = await baseDatos;
+    return await bd.delete('sesion_borrador', where: 'id = ?', whereArgs: [id]);
   }
 
   /// Guardar sesión actual como borrador
