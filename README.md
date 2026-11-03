@@ -39,7 +39,7 @@ guarda los PDF en la carpeta de Documentos del usuario.
 
 ## Base de datos y reportes
 
-- **Base de datos SQLite:** `%APPDATA%\ITST\Simulador Financiero para Sistemas de Riego\simulador_riego.db`.  La carpeta se deriva de `CompanyName` y `ProductName` en `windows/runner/Runner.rc`; el `:` del marcador se sustituye por `_`.
+- **Base de datos SQLite_** `%APPDATA%\ITST\Simulador Financiero para Sistemas de Riego\simulador_riego.db`.  La carpeta se deriva de `CompanyName` y `ProductName` en `windows/runner/Runner.rc`; el `_` del marcador se sustituye por `_`.
 - **Reportes PDF:** se guardan en la carpeta de Documentos del usuario como `Evaluacion_Sistema_de_Riego_AAAA-MM-DD_HHMMSS.pdf`.
 
 ## Estructura de carpetas
