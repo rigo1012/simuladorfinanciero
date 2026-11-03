@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'controladores/proveedor_simulador.dart';
 import 'vistas/diseno_escritorio.dart';
@@ -32,10 +33,18 @@ class AppColors {
   static const Color accentPressed = Color(0xFFCC8D00);
 }
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+
+    // La base de datos vive en la carpeta de soporte de la aplicación.
+    final carpetaSoporte = await getApplicationSupportDirectory();
+    if (!await carpetaSoporte.exists()) {
+      await carpetaSoporte.create(recursive: true);
+    }
+    await databaseFactory.setDatabasesPath(carpetaSoporte.path);
   }
   runApp(
     MultiProvider(

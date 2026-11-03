@@ -37,6 +37,11 @@ flutter analyze                 # Análisis estático
 No se requiere servidor, conexión a internet ni un instalador: la aplicación usa SQLite local y
 guarda los PDF en la carpeta de Documentos del usuario.
 
+## Base de datos y reportes
+
+- **Base de datos SQLite:** `C:\Users\rodri\AppData\Roaming\ITST\Simulador Financiero para Sistemas de Riego\simulador_riego.db`. La carpeta se deriva de `CompanyName` y `ProductName` en `windows/runner/Runner.rc`; el `:` del marcador se sustituye por `_`.
+- **Reportes PDF:** se guardan en la carpeta de Documentos del usuario como `Evaluacion_Sistema_de_Riego_AAAA-MM-DD_HHMMSS.pdf`.
+
 ## Estructura de carpetas
 
 ```
@@ -67,8 +72,8 @@ El manual de usuario se entrega por separado.
 
 ## Autor(es)
 
-- [COMPLETAR: nombre del autor o autores]
-- [COMPLETAR: correo institucional]
+- Rodrigo Domingo Hernandez
+- 22te0414@teziutlan.tecnm.com.mx
 - Instituto Tecnológico Superior de Teziutlán (ITST)
 
 ## Licencia
