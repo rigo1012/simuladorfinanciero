@@ -73,7 +73,7 @@ El manual de usuario se entrega por separado.
 ## Autor(es)
 
 - Rodrigo Domingo Hernandez
-- 22te0414@teziutlan.tecnm.com.mx
+- l22te0414@teziutlan.tecnm.mx
 - Instituto Tecnológico Superior de Teziutlán (ITST)
 
 ## Licencia
